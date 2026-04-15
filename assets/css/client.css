@@ -352,6 +352,16 @@ button:disabled {
   width: min(520px, 95vw);
 }
 
+.payment-modal-box {
+  width: min(720px, 96vw);
+  max-height: 92vh;
+  overflow: auto;
+}
+
+#payment-brick-container {
+  margin-top: 10px;
+}
+
 .prize-claim-modal label {
   margin-top: 6px;
 }

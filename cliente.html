@@ -125,7 +125,19 @@
     </div>
   </div>
 
+  <div id="payment-modal" class="overlay hidden">
+    <div class="modal panel payment-modal-box">
+      <div class="panel-head">
+        <h3>Checkout</h3>
+        <button id="close-payment-modal" type="button" class="ghost-action">Fechar</button>
+      </div>
+      <p class="muted">Escolha Cartao ou PIX e finalize o pagamento sem sair da pagina.</p>
+      <div id="payment-brick-container"></div>
+    </div>
+  </div>
+
   <div id="toast" class="toast"></div>
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
   <script type="module" src="assets/js/cliente.js"></script>
 </body>
 </html>

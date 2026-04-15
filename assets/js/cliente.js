@@ -38,6 +38,9 @@ const ui = {
   closeMyTicketsPopupBtn: document.getElementById('close-my-tickets-popup'),
   raffleFullscreenPicker: document.getElementById('raffle-fullscreen-picker'),
   raffleFullscreenPickerList: document.getElementById('raffle-fullscreen-picker-list'),
+  paymentModal: document.getElementById('payment-modal'),
+  closePaymentModalBtn: document.getElementById('close-payment-modal'),
+  paymentBrickContainer: document.getElementById('payment-brick-container'),
   prizeClaimModal: document.getElementById('prize-claim-modal'),
   closePrizeClaimBtn: document.getElementById('close-prize-claim'),
   prizeClaimMessage: document.getElementById('prize-claim-message'),
@@ -64,6 +67,7 @@ const state = {
   selectedNumbers: [],
   prizeClaimContext: null,
   pendingPrizeClaims: [],
+  checkoutContext: null,
   myTickets: [],
   activeTab: 'shop',
   hasPickedRaffle: false
@@ -71,6 +75,9 @@ const state = {
 
 let unsubTickets = null;
 let liveFeedTimer = null;
+let mpClient = null;
+let paymentBrickController = null;
+let pixStatusPollTimer = null;
 const WINNER_DISPLAY_MS = 3 * 24 * 60 * 60 * 1000;
 const DEFAULT_PRIZE_WHATSAPP_NUMBER = '5563991133386';
 
@@ -184,56 +191,7 @@ function onSendPrizeClaim() {
   closePrizeClaimModal();
 }
 
-function persistPendingPrizeClaims() {
-  if (!state.pendingPrizeClaims.length) {
-    localStorage.removeItem('sp_pending_prize_claims');
-    return;
-  }
-
-  localStorage.setItem('sp_pending_prize_claims', JSON.stringify(state.pendingPrizeClaims));
-}
-
-function hasApprovedPaymentInUrl() {
-  const params = new URLSearchParams(window.location.search);
-  const status = (params.get('status') || '').toLowerCase();
-  const collectionStatus = (params.get('collection_status') || '').toLowerCase();
-
-  if (status === 'approved' || collectionStatus === 'approved') {
-    return true;
-  }
-
-  return false;
-}
-
-function consumePendingPrizeClaimsAfterApprovedPayment() {
-  if (!hasApprovedPaymentInUrl()) {
-    return;
-  }
-
-  const raw = localStorage.getItem('sp_pending_prize_claims');
-  if (!raw) {
-    return;
-  }
-
-  try {
-    const parsed = JSON.parse(raw);
-    state.pendingPrizeClaims = Array.isArray(parsed) ? parsed : [];
-  } catch {
-    state.pendingPrizeClaims = [];
-  }
-
-  if (!state.pendingPrizeClaims.length) {
-    localStorage.removeItem('sp_pending_prize_claims');
-    return;
-  }
-
-  openPrizeClaimModal(state.pendingPrizeClaims[0]);
-  showToast('Pagamento aprovado. Agora informe a chave Pix para receber o premio.');
-
-  // Clean URL params to avoid reopening on refresh.
-  const cleanUrl = `${window.location.origin}${window.location.pathname}`;
-  window.history.replaceState({}, document.title, cleanUrl);
-}
+function persistPendingPrizeClaims() {}
 
 function renderInstantPrizeAlert(product) {
   if (!state.hasPickedRaffle || !product) {
@@ -362,6 +320,246 @@ function openFullscreenPicker() {
 
 function closeFullscreenPicker() {
   ui.raffleFullscreenPicker.classList.add('hidden');
+}
+
+function ensureMercadoPagoClient() {
+  if (mpClient) {
+    return mpClient;
+  }
+
+  if (!window.MercadoPago || !MP_CONFIG.PUBLIC_KEY) {
+    throw new Error('SDK do Mercado Pago indisponivel.');
+  }
+
+  mpClient = new window.MercadoPago(MP_CONFIG.PUBLIC_KEY, { locale: 'pt-BR' });
+  return mpClient;
+}
+
+async function closePaymentModal() {
+  ui.paymentModal.classList.add('hidden');
+  if (pixStatusPollTimer) {
+    clearInterval(pixStatusPollTimer);
+    pixStatusPollTimer = null;
+  }
+  if (paymentBrickController) {
+    await paymentBrickController.unmount();
+    paymentBrickController = null;
+  }
+}
+
+async function openEmbeddedCheckout(checkoutContext) {
+  const mp = ensureMercadoPagoClient();
+  const bricksBuilder = mp.bricks();
+
+  if (paymentBrickController) {
+    await paymentBrickController.unmount();
+    paymentBrickController = null;
+  }
+
+  state.checkoutContext = checkoutContext;
+  ui.paymentModal.classList.remove('hidden');
+
+  paymentBrickController = await bricksBuilder.create('payment', 'payment-brick-container', {
+    initialization: {
+      amount: Number(checkoutContext.totalAmount.toFixed(2)),
+      payer: {
+        email: checkoutContext.buyer.email
+      }
+    },
+    customization: {
+      paymentMethods: {
+        ticket: 'none',
+        debitCard: 'none',
+        maxInstallments: 12
+      }
+    },
+    callbacks: {
+      onReady: () => {},
+      onSubmit: async ({ formData }) => processEmbeddedPayment(formData),
+      onError: (error) => {
+        console.error(error);
+        showToast('Erro ao iniciar checkout integrado.');
+      }
+    }
+  });
+}
+
+async function saveApprovedTickets(checkoutContext) {
+  if (checkoutContext.ticketsReleased) {
+    return;
+  }
+
+  for (const num of checkoutContext.selectedNumbers) {
+    const ticketRef = doc(db, 'artifacts', appId, 'public', 'data', `tickets_${checkoutContext.product.id}`, num);
+    const check = await getDoc(ticketRef);
+    if (check.exists()) {
+      throw new Error(`A cota ${num} ja foi comprada por outra pessoa.`);
+    }
+  }
+
+  for (const num of checkoutContext.selectedNumbers) {
+    const payload = {
+      number: num,
+      buyerName: checkoutContext.buyer.name,
+      buyerEmail: checkoutContext.buyer.email,
+      buyerCpf: checkoutContext.buyer.cpf,
+      status: 'approved',
+      raffleId: checkoutContext.product.id,
+      raffleTitle: checkoutContext.product.prizeName || checkoutContext.product.title,
+      paymentMethod: checkoutContext.paymentMethod || '-',
+      paymentId: checkoutContext.paymentId || '-',
+      date: new Date().toISOString(),
+      uid: state.user.uid,
+      lgpdConsent: true
+    };
+
+    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `tickets_${checkoutContext.product.id}`, num), payload);
+    await setDoc(doc(db, 'artifacts', appId, 'users', state.user.uid, 'purchases', `${checkoutContext.product.id}_${num}`), payload);
+  }
+
+  checkoutContext.ticketsReleased = true;
+}
+
+async function applyPrizeClaimFlow(checkoutContext) {
+  const selectedPrizeHits = getSelectedPrizeHits(checkoutContext.product).filter((item) =>
+    checkoutContext.selectedNumbers.includes(item.number)
+  );
+
+  if (!selectedPrizeHits.length) {
+    return;
+  }
+
+  state.pendingPrizeClaims = selectedPrizeHits.map((item) => ({
+    number: item.number,
+    value: item.value,
+    whatsappNumber: checkoutContext.product.prizeWhatsapp || DEFAULT_PRIZE_WHATSAPP_NUMBER,
+    name: checkoutContext.buyer.name,
+    email: checkoutContext.buyer.email,
+    cpf: checkoutContext.buyer.cpf,
+    raffleTitle: checkoutContext.product.prizeName || checkoutContext.product.title
+  }));
+  persistPendingPrizeClaims();
+  openPrizeClaimModal(state.pendingPrizeClaims[0]);
+}
+
+async function fetchPaymentStatus(paymentId) {
+  const response = await fetch(`/api/payment-status?id=${encodeURIComponent(String(paymentId))}`);
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.error || 'Falha ao consultar status do pagamento.');
+  }
+  return data;
+}
+
+function startPixStatusPolling(checkoutContext) {
+  if (pixStatusPollTimer) {
+    clearInterval(pixStatusPollTimer);
+  }
+
+  let attempts = 0;
+  pixStatusPollTimer = setInterval(async () => {
+    attempts += 1;
+
+    try {
+      const statusData = await fetchPaymentStatus(checkoutContext.paymentId);
+      const status = String(statusData.status || '').toLowerCase();
+
+      if (status === 'approved') {
+        clearInterval(pixStatusPollTimer);
+        pixStatusPollTimer = null;
+
+        await saveApprovedTickets(checkoutContext);
+        await applyPrizeClaimFlow(checkoutContext);
+
+        state.selectedNumbers = [];
+        render();
+        showToast('PIX aprovado! Cotas liberadas com sucesso.');
+        return;
+      }
+
+      if (['rejected', 'cancelled'].includes(status) || attempts >= 60) {
+        clearInterval(pixStatusPollTimer);
+        pixStatusPollTimer = null;
+        showToast(status === 'approved' ? 'Pagamento aprovado.' : 'Pagamento PIX nao aprovado no prazo.');
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }, 8000);
+}
+
+async function processEmbeddedPayment(formData) {
+  const checkoutContext = state.checkoutContext;
+  if (!checkoutContext) {
+    throw new Error('Checkout sem contexto.');
+  }
+
+  const cpfDigits = checkoutContext.buyer.cpf.replace(/\D/g, '');
+  const paymentPayload = {
+    transaction_amount: Number(checkoutContext.totalAmount.toFixed(2)),
+    description: `Rifa - ${checkoutContext.product.prizeName || checkoutContext.product.title}`,
+    payment_method_id: formData.payment_method_id,
+    payer: {
+      email: checkoutContext.buyer.email,
+      first_name: checkoutContext.buyer.name.split(' ')[0] || checkoutContext.buyer.name,
+      last_name: checkoutContext.buyer.name.split(' ').slice(1).join(' ') || '-',
+      identification: {
+        type: 'CPF',
+        number: cpfDigits
+      }
+    },
+    external_reference: `${checkoutContext.product.id}|${checkoutContext.selectedNumbers.join(',')}`,
+    metadata: {
+      raffleId: checkoutContext.product.id,
+      selectedNumbers: checkoutContext.selectedNumbers.join(',')
+    }
+  };
+
+  if (formData.token) {
+    paymentPayload.token = formData.token;
+  }
+  if (formData.installments) {
+    paymentPayload.installments = Number(formData.installments);
+  }
+  if (formData.issuer_id) {
+    paymentPayload.issuer_id = formData.issuer_id;
+  }
+
+  const paymentResponse = await fetch('/api/create-payment', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(paymentPayload)
+  });
+
+  const payment = await paymentResponse.json();
+  if (!paymentResponse.ok) {
+    const message = payment?.message || 'Pagamento nao aprovado.';
+    throw new Error(message);
+  }
+
+  checkoutContext.paymentMethod = payment.payment_method_id;
+  checkoutContext.paymentId = payment.id;
+
+  if (payment.status === 'approved') {
+    await saveApprovedTickets(checkoutContext);
+    await applyPrizeClaimFlow(checkoutContext);
+
+    state.selectedNumbers = [];
+    await closePaymentModal();
+    render();
+    showToast('Pagamento aprovado e cotas liberadas.');
+    return;
+  }
+
+  if (payment.status === 'pending' && payment.payment_method_id === 'pix') {
+    showToast('PIX gerado. A cota sera liberada somente apos confirmacao do Mercado Pago.');
+    startPixStatusPolling(checkoutContext);
+    return;
+  }
+
+  showToast(`Pagamento com status: ${payment.status || 'desconhecido'}.`);
 }
 
 function renderQuotaGrid() {
@@ -655,8 +853,6 @@ async function processCheckout(event) {
     return;
   }
 
-  const selectedPrizeHits = getSelectedPrizeHits(product);
-
   if (product.status !== 'active') {
     showToast('Apenas rifas ativas podem receber compras.');
     return;
@@ -680,96 +876,21 @@ async function processCheckout(event) {
       }
     }
 
-    for (const num of state.selectedNumbers) {
-      const payload = {
-        number: num,
-        buyerName: ui.name.value,
-        buyerEmail: ui.email.value,
-        buyerCpf: ui.cpf.value,
-        status: 'awaiting_payment',
-        raffleId: product.id,
-        raffleTitle: product.prizeName || product.title,
-        date: new Date().toISOString(),
-        uid: state.user.uid,
-        lgpdConsent: true
-      };
-
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `tickets_${product.id}`, num), payload);
-      await setDoc(doc(db, 'artifacts', appId, 'users', state.user.uid, 'purchases', `${product.id}_${num}`), payload);
-    }
-
-    const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${MP_CONFIG.ACCESS_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        items: [
-          {
-            title: `Rifa - ${product.prizeName || product.title}`,
-            quantity: 1,
-            unit_price: state.selectedNumbers.length * Number(product.price),
-            currency_id: 'BRL'
-          }
-        ],
-        external_reference: `${product.id}|${state.selectedNumbers.join(',')}`,
-        metadata: {
-          raffleId: product.id,
-          selectedNumbers: state.selectedNumbers.join(','),
-          buyerUid: state.user.uid
-        },
-        payer: {
-          name: ui.name.value,
-          email: ui.email.value,
-          identification: {
-            type: 'CPF',
-            number: ui.cpf.value.replace(/\D/g, '')
-          }
-        },
-        payment_methods: {
-          excluded_payment_types: [
-            { id: 'ticket' },
-            { id: 'debit_card' },
-            { id: 'atm' }
-          ],
-          installments: 12
-        },
-        back_urls: {
-          success: `${window.location.origin}${window.location.pathname}?status=approved`,
-          failure: `${window.location.origin}${window.location.pathname}?status=failure`,
-          pending: `${window.location.origin}${window.location.pathname}?status=pending`
-        },
-        auto_return: 'approved'
-      })
-    });
-
-    const data = await response.json();
-
-    if (selectedPrizeHits.length) {
-      state.pendingPrizeClaims = selectedPrizeHits.map((item) => ({
-        number: item.number,
-        value: item.value,
-        whatsappNumber: product.prizeWhatsapp || DEFAULT_PRIZE_WHATSAPP_NUMBER,
+    const checkoutContext = {
+      product,
+      selectedNumbers: [...state.selectedNumbers],
+      totalAmount: state.selectedNumbers.length * Number(product.price),
+      buyer: {
         name: ui.name.value.trim(),
         email: ui.email.value.trim(),
-        cpf: ui.cpf.value.trim(),
-        raffleTitle: product.prizeName || product.title
-      }));
-      persistPendingPrizeClaims();
-      showToast('Compra criada. O popup de premio aparecera somente apos pagamento aprovado.');
-    }
+        cpf: ui.cpf.value.trim()
+      }
+    };
 
-    state.selectedNumbers = [];
-    render();
-    showToast('Reserva criada com sucesso.');
-
-    if (data.init_point) {
-      window.location.href = data.init_point;
-    }
+    await openEmbeddedCheckout(checkoutContext);
   } catch (err) {
     console.error(err);
-    showToast('Erro ao processar checkout.');
+    showToast(err?.message || 'Erro ao processar checkout.');
   } finally {
     ui.buyBtn.disabled = false;
   }
@@ -798,6 +919,14 @@ async function init() {
     renderTabs();
     ui.myTicketsPopup.classList.remove('hidden');
   });
+  ui.closePaymentModalBtn.addEventListener('click', () => {
+    closePaymentModal();
+  });
+  ui.paymentModal.addEventListener('click', (event) => {
+    if (event.target === ui.paymentModal) {
+      closePaymentModal();
+    }
+  });
   ui.closePrizeClaimBtn.addEventListener('click', closePrizeClaimModal);
   ui.prizeClaimModal.addEventListener('click', (event) => {
     if (event.target === ui.prizeClaimModal) {
@@ -808,7 +937,6 @@ async function init() {
 
   setupCookieConsent();
   startLiveFeed();
-  consumePendingPrizeClaimsAfterApprovedPayment();
   ui.checkoutForm.addEventListener('submit', processCheckout);
 
   try {
