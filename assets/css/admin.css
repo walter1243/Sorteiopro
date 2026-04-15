@@ -1,0 +1,528 @@
+.admin-layout {
+  display: grid;
+  gap: 12px;
+}
+
+#admin-menu-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  justify-items: end;
+  align-items: stretch;
+  background: #060a12b8;
+}
+
+#admin-menu-popup.hidden {
+  display: none;
+}
+
+#ticket-detail-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: #060a12d9;
+  backdrop-filter: blur(4px);
+}
+
+#ticket-detail-modal.hidden {
+  display: none;
+}
+
+.admin-page {
+  background: #07090e;
+}
+
+.admin-page .topbar {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-page .brand {
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-page .brand span:last-child {
+  min-width: 0;
+}
+
+.admin-page .brand strong,
+.admin-page .brand small {
+  white-space: nowrap;
+}
+
+.admin-page .page {
+  margin-top: 12px;
+}
+
+.admin-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.menu-toggle {
+  width: 50px;
+  line-height: 1;
+  padding: 8px 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.menu-toggle svg {
+  width: 20px;
+  height: 20px;
+  fill: #e8effc;
+}
+
+.menu-toggle:hover {
+  background: transparent;
+  border-color: transparent;
+}
+
+.admin-menu-modal {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(50vw, 560px);
+  min-height: 100vh;
+  border-radius: 0;
+  border-right: 0;
+  border-top: 0;
+  border-bottom: 0;
+  background: #111d31;
+  animation: admin-pop-in 180ms ease-out;
+}
+
+.admin-menu-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.admin-menu-link {
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid #2e3f5c;
+  border-radius: 12px;
+  background: #14243c;
+  color: #c9d7ef;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.admin-menu-link.active {
+  border-color: #3d8cff;
+  background: #17325a;
+  color: #e5f0ff;
+}
+
+.admin-menu-footer {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #2e3f5c;
+}
+
+.admin-logout-btn {
+  width: 100%;
+}
+
+.admin-content {
+  display: block;
+}
+
+.admin-card {
+  min-width: 0;
+  background: #13223a;
+}
+
+.admin-section {
+  animation: admin-section-fade 220ms ease-out;
+}
+
+.auth {
+  width: min(500px, 95vw);
+  margin: 40px auto;
+}
+
+.auth form,
+#raffle-form {
+  display: grid;
+  gap: 10px;
+}
+
+.pass-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.pass-row button {
+  white-space: nowrap;
+}
+
+.prized-numbers-box {
+  border: 1px solid #2e3f5c;
+  border-radius: 12px;
+  padding: 12px;
+  background: #0f1829;
+}
+
+.prized-numbers-box h4 {
+  margin: 0 0 6px;
+}
+
+.prized-number-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: end;
+  margin: 10px 0 8px;
+}
+
+.prized-table-wrap {
+  max-height: 200px;
+}
+
+.prized-remove-btn {
+  padding: 7px 10px;
+  font-size: 0.7rem;
+}
+
+label {
+  font-size: 0.82rem;
+  color: var(--muted);
+  display: grid;
+  gap: 6px;
+}
+
+input,
+select {
+  width: 100%;
+  background: #0d1523;
+  color: var(--text);
+  border: 1px solid #2e3f5c;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+button {
+  background: #17b987;
+  color: #fff;
+  border: 1px solid #53d9b0;
+  border-radius: 10px;
+  padding: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  cursor: pointer;
+}
+
+button.ghost {
+  background: #ffffff12;
+  border-color: #ffffff33;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.table-wrap {
+  max-height: 430px;
+  overflow: auto;
+  border: 1px solid #2e3f5c;
+  border-radius: 14px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-wrap table {
+  min-width: 760px;
+}
+
+.buyers-toolbar {
+  margin: 14px 0 10px;
+}
+
+.quota-overview {
+  margin: 14px 0 16px;
+  background: #101a2c;
+  border: 1px solid #294062;
+}
+
+.quota-overview-head {
+  align-items: baseline;
+  gap: 12px;
+}
+
+.quota-overview-head h4 {
+  margin: 0;
+}
+
+.quota-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
+  gap: 8px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.quota-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #b8cae8;
+  font-size: 0.82rem;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid #294062;
+  background: #0d1523;
+}
+
+.legend-dot.sold {
+  background: #17325a;
+  border-color: #3d8cff;
+}
+
+.legend-dot.selected {
+  background: #3a2a61;
+  border-color: #8e6cff;
+}
+
+.legend-dot.winner {
+  background: #1e5b43;
+  border-color: #39d29d;
+}
+
+.sales-history-block {
+  margin-top: 16px;
+}
+
+.quota-chip {
+  display: grid;
+  place-items: center;
+  min-height: 42px;
+  border-radius: 10px;
+  border: 1px solid #294062;
+  background: #0d1523;
+  color: #9fb2d3;
+  font-weight: 700;
+  padding: 7px 4px;
+  text-align: center;
+  gap: 2px;
+}
+
+.quota-chip-button {
+  width: 100%;
+  min-width: 0;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.quota-chip strong {
+  font-size: 0.94rem;
+  line-height: 1;
+}
+
+.quota-chip small {
+  font-size: 0.63rem;
+  line-height: 1;
+  color: #b8cae8;
+  text-transform: lowercase;
+}
+
+.quota-chip.sold {
+  background: #17325a;
+  border-color: #3d8cff;
+  color: #eff6ff;
+}
+
+.quota-chip.client-selected {
+  box-shadow: 0 0 0 1px #8e6cff66 inset;
+}
+
+.quota-chip.winner {
+  background: #1e5b43;
+  border-color: #39d29d;
+  color: #f2fff9;
+}
+
+.ticket-detail-modal {
+  width: min(420px, calc(100vw - 28px));
+}
+
+.close-x-btn {
+  min-width: 40px;
+  padding: 8px 0;
+  font-size: 0.9rem;
+}
+
+.ticket-detail-content {
+  display: grid;
+  gap: 8px;
+}
+
+.ticket-detail-content p {
+  margin: 0;
+  color: #dbe6f8;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+thead {
+  background: #121c2f;
+}
+
+th,
+td {
+  padding: 10px;
+  border-bottom: 1px solid #253550;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.buyer-detail-trigger {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #eff6ff;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 700;
+  text-align: left;
+}
+
+.number-detail-trigger {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #d8e7ff;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 800;
+  text-align: left;
+}
+
+.number-detail-trigger:hover {
+  color: #53d9b0;
+  text-decoration: underline;
+}
+
+.buyer-detail-trigger:hover {
+  color: #53d9b0;
+  text-decoration: underline;
+}
+
+.winner {
+  margin-top: 12px;
+  border: 1px solid #3f5f41;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.paste-zone {
+  border: 1px dashed #4a5f82;
+  background: #0e1625;
+  color: var(--muted);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 0.82rem;
+}
+
+.prize-preview {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #2e3f5c;
+}
+
+.sep {
+  border: 0;
+  border-top: 1px solid #2e3f5c;
+  margin: 18px 0;
+}
+
+.draw-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.draw-form label {
+  margin: 0;
+}
+
+@keyframes admin-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes admin-section-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1000px) {
+  .admin-menu-modal {
+    width: min(88vw, 420px);
+  }
+
+  .prized-number-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .draw-form {
+    grid-template-columns: 1fr;
+  }
+
+  .quota-overview-grid {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 6px;
+  }
+
+  .quota-overview-grid .quota-chip {
+    min-width: 62px;
+  }
+}

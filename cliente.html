@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SorteiosPro | Cliente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/base.css" />
+  <link rel="stylesheet" href="assets/css/client.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">SP</span>
+      <span>
+        <strong>SorteiosPro</strong>
+        <small>Area do Cliente</small>
+      </span>
+    </a>
+  </header>
+
+  <main class="page">
+    <section class="panel client-tabs-wrap">
+      <div class="client-tabs">
+        <button id="tab-shop" class="tab-btn active" type="button">Comprar cotas</button>
+        <button id="tab-mine" class="tab-btn" type="button">Minhas cotas</button>
+      </div>
+    </section>
+
+    <div id="floating-feed" class="floating-feed"></div>
+
+    <section class="panel" id="shop-section">
+      <div class="panel-head">
+        <h1>Rifas Ativas</h1>
+        <p>Escolha uma rifa ativa para ver os detalhes e comprar cotas.</p>
+      </div>
+      <div id="raffle-cards" class="raffle-cards"></div>
+    </section>
+
+    <section class="grid" id="shop-grid-section">
+      <article class="panel left">
+        <div class="title-row">
+          <h2 id="raffle-title">Carregando...</h2>
+          <div class="title-actions">
+            <span id="raffle-status" class="badge">-</span>
+          </div>
+        </div>
+          <div id="instant-prize-alert" class="instant-prize-alert hidden"></div>
+          <div id="winner-alert" class="winner-alert hidden"></div>
+          <img id="raffle-image" class="raffle-image hidden" alt="Imagem do premio" />
+        <p id="raffle-price" class="muted"></p>
+        <div id="quota-grid" class="quota-grid"></div>
+      </article>
+
+      <aside class="panel right">
+        <h3>Finalizar Compra</h3>
+        <form id="checkout-form">
+          <input id="name" placeholder="Nome completo" required />
+          <input id="email" type="email" placeholder="E-mail" required />
+          <input id="cpf" placeholder="CPF" required />
+          <label class="checkbox">
+            <input id="terms" type="checkbox" required />
+            <span>Aceito os termos de uso e politica de privacidade.</span>
+          </label>
+
+          <div class="summary">
+            <p>Cotas: <strong id="selected-count">0</strong></p>
+            <p>Total: <strong id="selected-total">R$ 0,00</strong></p>
+          </div>
+
+          <button id="buy-btn" type="submit">Pagar com Mercado Pago</button>
+          <small id="purchase-msg" class="muted"></small>
+        </form>
+      </aside>
+    </section>
+
+  </main>
+
+  <div id="my-tickets-popup" class="overlay hidden">
+    <div class="modal panel popup-box">
+      <div class="panel-head">
+        <h3>Minhas Cotas</h3>
+        <button id="close-my-tickets-popup" type="button" class="ghost-action">Fechar</button>
+      </div>
+      <div id="my-tickets-popup-list" class="ticket-list"></div>
+    </div>
+  </div>
+
+  <div id="raffle-fullscreen-picker" class="overlay hidden fullscreen-picker-overlay">
+    <div class="fullscreen-picker-content panel">
+      <div class="panel-head">
+        <h3>Escolha a rifa desejada</h3>
+        <p class="muted">Existem varias rifas ativas no momento.</p>
+      </div>
+      <div id="raffle-fullscreen-picker-list" class="raffle-cards fullscreen-picker-list"></div>
+    </div>
+  </div>
+
+  <div id="prize-claim-modal" class="overlay hidden">
+    <div class="modal panel prize-claim-modal">
+      <div class="panel-head">
+        <h3>Parabens, cota premiada!</h3>
+        <button id="close-prize-claim" type="button" class="ghost-action">Fechar</button>
+      </div>
+      <p id="prize-claim-message" class="muted"></p>
+      <label>Chave Pix para receber o premio
+        <input id="prize-claim-pix" placeholder="Digite sua chave Pix" />
+      </label>
+      <button id="send-prize-claim" type="button">Receber PIX</button>
+      <small class="muted">Ao enviar, sua solicitacao sera encaminhada para o WhatsApp do administrador.</small>
+    </div>
+  </div>
+
+  <div id="cookie-lgpd-modal" class="overlay hidden">
+    <div class="modal panel">
+      <h3>Consentimento de Cookies e LGPD</h3>
+      <p class="muted">Utilizamos cookies e dados para processar compras de cotas e seguranca da operacao.</p>
+      <label class="checkbox">
+        <input id="cookie-consent-check" type="checkbox" />
+        <span>Li e aceito a politica de cookies e LGPD.</span>
+      </label>
+      <button id="cookie-consent-btn" type="button">Aceitar e continuar</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script type="module" src="assets/js/cliente.js"></script>
+</body>
+</html>

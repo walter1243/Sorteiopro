@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SorteiosPro | Administrador</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/base.css" />
+  <link rel="stylesheet" href="assets/css/admin.css" />
+</head>
+<body class="admin-page">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">SP</span>
+      <span>
+        <strong>SorteiosPro</strong>
+        <small>Painel Administrativo</small>
+      </span>
+    </div>
+    <div class="admin-header-actions">
+      <button id="menu-toggle" type="button" class="ghost menu-toggle" aria-label="Abrir menu">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <rect x="3" y="5" width="18" height="2.6" rx="1.3"></rect>
+          <rect x="3" y="10.7" width="18" height="2.6" rx="1.3"></rect>
+          <rect x="3" y="16.4" width="18" height="2.6" rx="1.3"></rect>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="page">
+    <section id="admin-login" class="panel auth">
+      <h1>Login Administrador</h1>
+      <form id="admin-login-form">
+        <input id="admin-username" placeholder="Login" required />
+        <div class="pass-row">
+          <input id="admin-password" type="password" placeholder="Senha" required />
+          <button id="toggle-password" type="button" class="ghost">Ver senha</button>
+        </div>
+        <button type="submit">Entrar</button>
+      </form>
+    </section>
+
+    <section id="admin-panel" class="hidden">
+      <div class="admin-layout">
+        <div id="admin-menu-popup" class="overlay hidden">
+          <div class="panel admin-menu-modal">
+            <div class="panel-head">
+              <h3>Menu</h3>
+              <button id="close-menu-popup" type="button" class="ghost">Fechar</button>
+            </div>
+            <div class="admin-menu-list">
+              <button class="admin-menu-link" data-target="section-config" type="button">Configuracao da rifa</button>
+              <button class="admin-menu-link" data-target="section-buyers" type="button">Compradores e sorteio</button>
+            </div>
+            <div class="admin-menu-footer">
+              <button id="logout-btn" class="ghost admin-logout-btn">Sair do painel</button>
+            </div>
+          </div>
+        </div>
+
+        <section class="admin-content">
+          <section class="panel admin-card admin-section" id="section-config">
+            <h3>Configuracao da Rifa</h3>
+            <form id="raffle-form">
+              <label>Rifa
+                <select id="raffle-select"></select>
+              </label>
+              <label>Premio
+                <input id="prize-name" required />
+              </label>
+              <label>Valor total da rifa (R$)
+                <input id="raffle-total-value" type="number" step="0.01" min="1" required />
+              </label>
+              <label>Quantidade de cotas
+                <input id="total-quotas" type="number" min="1" required />
+              </label>
+              <label>Valor da cota (auto = valor total / cotas)
+                <input id="quota-price" type="number" step="0.01" min="0" readonly />
+              </label>
+              <label>WhatsApp para aviso de premio
+                <input id="prize-whatsapp" placeholder="Ex: 5511999999999" />
+              </label>
+
+              <div class="prized-numbers-box">
+                <h4>Numeros Premiados</h4>
+                <p class="muted">Defina os numeros premiados e o valor de cada premio para esta rifa.</p>
+                <div class="prized-number-form-row">
+                  <label>Numero da cota
+                    <input id="prized-number-input" placeholder="Ex: 007" inputmode="numeric" pattern="[0-9]*" maxlength="3" />
+                  </label>
+                  <label>Valor do premio (R$)
+                    <input id="prized-value-input" type="number" step="0.01" min="0" placeholder="Ex: 500" />
+                  </label>
+                  <button id="add-prized-number" type="button" class="ghost">Adicionar</button>
+                </div>
+                <div class="table-wrap prized-table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Numero</th>
+                        <th>Valor premio</th>
+                        <th>Acao</th>
+                      </tr>
+                    </thead>
+                    <tbody id="prized-numbers-body"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <label>Foto do premio
+                <input id="prize-image-file" type="file" accept="image/*" />
+              </label>
+              <div id="image-paste-zone" class="paste-zone" tabindex="0">
+                Cole a imagem com Ctrl+V aqui (desktop) ou selecione da galeria (mobile).
+              </div>
+              <img id="prize-image-preview" class="prize-preview hidden" alt="Preview do premio" />
+              <p id="image-selection-hint" class="muted">Nenhuma imagem salva para esta rifa.</p>
+
+              <label>Status
+                <select id="raffle-status">
+                  <option value="active">Ativa</option>
+                  <option value="paused">Pausada</option>
+                  <option value="drawn">Encerrada</option>
+                </select>
+              </label>
+              <button type="submit">Salvar Configuracoes</button>
+            </form>
+            <button id="create-raffle-btn" class="ghost">Criar Nova Rifa</button>
+            <p class="muted">Voce pode manter mais de uma rifa ativa ao mesmo tempo.</p>
+          </section>
+
+          <section class="panel admin-card admin-section hidden" id="section-buyers">
+            <div class="panel-head">
+              <h3>Compradores e Sorteio Transparente</h3>
+              <button id="draw-btn">Realizar Sorteio</button>
+            </div>
+            <div class="buyers-toolbar">
+              <label>Escolha a rifa para visualizar e sortear
+                <select id="buyers-raffle-select"></select>
+              </label>
+            </div>
+            <p class="muted">O sorteio automatico acontece somente ao atingir 100% das cotas vendidas.</p>
+            <div class="quota-overview panel">
+              <div class="panel-head quota-overview-head">
+                <h4>Todas as cotas da rifa selecionada</h4>
+                <p id="quota-overview-summary" class="muted"></p>
+              </div>
+              <div class="quota-legend" aria-label="Legenda das cotas">
+                <span class="legend-item"><span class="legend-dot available"></span>Disponivel</span>
+                <span class="legend-item"><span class="legend-dot selected"></span>Selecionada no cliente</span>
+                <span class="legend-item"><span class="legend-dot sold"></span>Vendida</span>
+                <span class="legend-item"><span class="legend-dot winner"></span>Ganhadora</span>
+              </div>
+              <div id="quota-overview-grid" class="quota-overview-grid"></div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Numero</th>
+                    <th>Nome</th>
+                    <th>E-mail</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="buyers-body"></tbody>
+              </table>
+            </div>
+            <div class="sales-history-block">
+              <div class="panel-head">
+                <h4>Historico por cota vendida</h4>
+                <p class="muted">Cada cota aparece separadamente, conforme foi comprada em cada rifa.</p>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Rifa</th>
+                      <th>Numero</th>
+                      <th>Nome</th>
+                      <th>E-mail</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sales-history-body"></tbody>
+                </table>
+              </div>
+            </div>
+            <p id="winner-box" class="winner muted"></p>
+          </section>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div id="ticket-detail-modal" class="overlay hidden">
+    <div class="panel ticket-detail-modal">
+      <div class="panel-head">
+        <h3>Detalhes da cota</h3>
+        <button id="close-ticket-detail" type="button" class="ghost close-x-btn" aria-label="Fechar popup">X</button>
+      </div>
+      <div class="ticket-detail-content">
+        <p><strong>Rifa:</strong> <span id="ticket-detail-raffle">-</span></p>
+        <p><strong>Cota:</strong> <span id="ticket-detail-number">-</span></p>
+        <p><strong>Nome:</strong> <span id="ticket-detail-name">-</span></p>
+        <p><strong>E-mail:</strong> <span id="ticket-detail-email">-</span></p>
+        <p><strong>Status:</strong> <span id="ticket-detail-status">-</span></p>
+        <p><strong>Data:</strong> <span id="ticket-detail-date">-</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script type="module" src="assets/js/admin.js"></script>
+</body>
+</html>
