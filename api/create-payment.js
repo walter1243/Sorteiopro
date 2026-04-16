@@ -1,5 +1,10 @@
 const MP_API_BASE = 'https://api.mercadopago.com';
-import { insertPaymentEvent } from './_lib/neon.js';
+import {
+  createPedido,
+  insertPaymentEvent,
+  updatePedidoByExternalReference,
+  upsertRifa
+} from './_lib/neon.js';
 
 function getAccessToken() {
   const token = process.env.MP_ACCESS_TOKEN || process.env.MERCADO_PAGO_ACCESS_TOKEN;
@@ -55,6 +60,42 @@ export default async function handler(req, res) {
       metadata: body.metadata || {}
     };
 
+    const externalReference = payload.external_reference;
+    const raffleId = String(payload.metadata?.raffleId || '').trim() || null;
+    const selectedNumbersCsv = String(payload.metadata?.selectedNumbers || '').trim() || null;
+
+    if (!externalReference) {
+      return res.status(400).json({ error: 'external_reference is required' });
+    }
+
+    // Save order before generating PIX/Card payment in Mercado Pago.
+    if (raffleId) {
+      await upsertRifa({
+        id: raffleId,
+        title: String(body.description || 'Rifa sem titulo'),
+        price: Number(transactionAmount.toFixed(2)),
+        totalQuotas: null,
+        status: 'active',
+        rawPayload: payload.metadata || {}
+      });
+    }
+
+    await createPedido({
+      externalReference,
+      raffleId,
+      selectedNumbersCsv,
+      amount: Number(transactionAmount.toFixed(2)),
+      buyerName: `${String(payer.first_name || '').trim()} ${String(payer.last_name || '').trim()}`.trim() || null,
+      buyerEmail: payerEmail,
+      buyerCpf: String(payer.identification?.number || '').trim() || null,
+      paymentMethodId: paymentMethodId,
+      status: 'creating_payment',
+      statusDetail: 'saved_before_mp_create',
+      rawPayload: {
+        request: payload
+      }
+    });
+
     if (body.token) {
       payload.token = String(body.token);
     }
@@ -77,6 +118,17 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (!response.ok) {
+      await updatePedidoByExternalReference(externalReference, {
+        status: 'payment_failed',
+        statusDetail: 'mp_create_payment_failed',
+        mpStatus: String(data?.status || ''),
+        mpStatusDetail: String(data?.status_detail || data?.message || ''),
+        rawPayload: {
+          request: payload,
+          response: data
+        }
+      });
+
       await insertPaymentEvent({
         source: 'create-payment',
         status: 'error',
@@ -95,6 +147,19 @@ export default async function handler(req, res) {
         details: data
       });
     }
+
+    await updatePedidoByExternalReference(externalReference, {
+      paymentId: String(data.id || ''),
+      paymentMethodId: String(data.payment_method_id || paymentMethodId || ''),
+      status: 'payment_created',
+      statusDetail: 'mp_payment_created',
+      mpStatus: String(data.status || ''),
+      mpStatusDetail: String(data.status_detail || ''),
+      rawPayload: {
+        request: payload,
+        response: data
+      }
+    });
 
     await insertPaymentEvent({
       source: 'create-payment',

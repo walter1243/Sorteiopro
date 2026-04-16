@@ -3,6 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "db:init": "node --env-file=.env.local scripts/init-neon-schema.mjs"
+  },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4"
   }
