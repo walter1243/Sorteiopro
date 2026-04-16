@@ -15,7 +15,7 @@ function getAccessToken() {
   if (!token) {
     throw new Error('Missing MP_ACCESS_TOKEN environment variable');
   }
-  return token;
+  return String(token).trim();
 }
 
 function sanitizeExternalReference(value) {
