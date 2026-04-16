@@ -377,27 +377,41 @@ function selectPaymentMethod(method) {
   document.getElementById('payment-step-2-card').classList.toggle('hidden', method !== 'card');
   document.getElementById('payment-step-2-pix').classList.toggle('hidden', method !== 'pix');
   
-  if (method === 'pix') {
-    generatePixCode();
-  }
+  // For PIX, we'll generate the QR code after the user confirms payment
 }
 
-function generatePixCode() {
-  // Generate a fake PIX key (in production, get from backend)
-  const pixKey = `00020126580014br.gov.bcb.pixkey0123456789abcdef52040000530398654061${(state.checkoutContext.totalAmount * 100).toFixed(0).padStart(10, '0')}5303986540612345678901234567890123456789`;
+function generatePixCode(pixQrCodeString) {
   const pixQR = document.getElementById('pix-qr-code');
   const pixKeyTextarea = document.getElementById('pix-key');
   
-  // In production, generate QR code from backend using a library like qrcode.js
-  pixQR.innerHTML = '📱 <br> QR Code<br> (Gerado)';
-  pixKeyTextarea.value = pixKey;
+  // Clear previous QR codes
+  pixQR.innerHTML = '';
+  
+  // Generate QR code using qrcode.js library
+  try {
+    new QRCode(pixQR, {
+      text: pixQrCodeString,
+      width: 180,
+      height: 180,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  } catch (error) {
+    console.error('Erro ao gerar QR Code:', error);
+    pixQR.innerHTML = '❌ Erro ao gerar QR Code';
+    return;
+  }
+  
+  // Set the PIX key
+  pixKeyTextarea.value = pixQrCodeString;
   
   // Add copy button listener
   document.getElementById('copy-pix-key-btn').addEventListener('click', () => {
     pixKeyTextarea.select();
     document.execCommand('copy');
     showToast('Chave PIX copiada!');
-  });
+  }, { once: true });
 }
 
 async function processCardPayment(cardHolder, cardNumber, expiry, cvv) {
@@ -519,7 +533,25 @@ async function processPixPayment() {
 
     if (payment.status === 'pending' && payment.payment_method_id === 'pix') {
       showLoadingAnimation(false);
-      showSuccessMessage('PIX gerado! Processe o pagamento no seu banco e voltaremos a monitorar.');
+      
+      // Extract PIX QR Code from payment response
+      const pixQrCode = payment.point_of_interaction?.qr_code?.in_store_order_id || 
+                        payment.point_of_interaction?.qr_code?.string ||
+                        payment.qr_code ||
+                        null;
+      
+      if (pixQrCode) {
+        // Generate the real QR Code with the PIX string
+        generatePixCode(pixQrCode);
+      } else {
+        console.warn('QR Code not found in payment response:', payment);
+        document.getElementById('pix-qr-code').innerHTML = '⚠️ Erro ao gerar QR Code. Use a chave abaixo.';
+      }
+      
+      // Show step 2 with generated QR code
+      document.getElementById('payment-step-2-pix').classList.remove('hidden');
+      
+      showToast('PIX gerado! Escaneie o QR Code ou copie a chave.');
       startPixStatusPolling(checkoutContext);
       return;
     }
@@ -529,6 +561,8 @@ async function processPixPayment() {
       await applyPrizeClaimFlow(checkoutContext);
       state.selectedNumbers = [];
       showSuccessMessage('PIX aprovado! Suas cotas foram compradas.');
+    } else {
+      throw new Error(`Status inesperado: ${payment.status}`);
     }
   } catch (err) {
     showLoadingAnimation(false);

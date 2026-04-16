@@ -88,6 +88,7 @@ export default async function handler(req, res) {
       status_detail: data.status_detail,
       payment_method_id: data.payment_method_id,
       point_of_interaction: data.point_of_interaction || null,
+      qr_code: data.point_of_interaction?.qr_code || null,
       transaction_details: data.transaction_details || null
     });
   } catch (error) {
