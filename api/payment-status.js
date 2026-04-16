@@ -1,4 +1,5 @@
 const MP_API_BASE = 'https://api.mercadopago.com';
+import { insertPaymentEvent } from './_lib/neon.js';
 
 function getAccessToken() {
   const token = process.env.MP_ACCESS_TOKEN || process.env.MERCADO_PAGO_ACCESS_TOKEN;
@@ -32,11 +33,32 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (!response.ok) {
+      await insertPaymentEvent({
+        source: 'payment-status',
+        paymentId,
+        status: 'error',
+        statusDetail: data?.message || data?.error || 'mp_status_failed',
+        rawPayload: {
+          response: data
+        }
+      });
+
       return res.status(response.status).json({
         error: 'Mercado Pago payment status request failed',
         details: data
       });
     }
+
+    await insertPaymentEvent({
+      source: 'payment-status',
+      paymentId: String(data.id || paymentId),
+      externalReference: String(data.external_reference || ''),
+      status: String(data.status || ''),
+      statusDetail: String(data.status_detail || ''),
+      paymentMethodId: String(data.payment_method_id || ''),
+      amount: Number(data.transaction_amount || 0),
+      rawPayload: data
+    });
 
     return res.status(200).json({
       id: data.id,
@@ -48,6 +70,19 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error(error);
+
+    await insertPaymentEvent({
+      source: 'payment-status',
+      status: 'exception',
+      statusDetail: error.message || 'internal_server_error',
+      rawPayload: {
+        error: {
+          message: error.message,
+          stack: error.stack
+        }
+      }
+    });
+
     return res.status(500).json({ error: error.message || 'Internal Server Error' });
   }
 }
