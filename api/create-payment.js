@@ -9,8 +9,8 @@ import {
 function getAccessToken() {
   const token =
     process.env.MP_ACCESS_TOKEN ||
-    process.env.MERCADO_PAGO_ACCESS_TOKEN ||
     process.env.AccessToken ||
+    process.env.MERCADO_PAGO_ACCESS_TOKEN ||
     process.env.ACCESS_TOKEN;
   if (!token) {
     throw new Error('Missing MP_ACCESS_TOKEN environment variable');
@@ -131,14 +131,20 @@ export default async function handler(req, res) {
       body: JSON.stringify(payload)
     });
 
-    const data = await response.json();
+    const rawBody = await response.text();
+    let data = null;
+    try {
+      data = rawBody ? JSON.parse(rawBody) : null;
+    } catch (_) {
+      data = { raw: rawBody };
+    }
 
     if (!response.ok) {
       await updatePedidoByExternalReference(externalReference, {
         status: 'payment_failed',
         statusDetail: 'mp_create_payment_failed',
         mpStatus: String(data?.status || ''),
-        mpStatusDetail: String(data?.status_detail || data?.message || ''),
+        mpStatusDetail: String(data?.status_detail || data?.message || response.statusText || ''),
         rawPayload: {
           request: payload,
           response: data
@@ -148,7 +154,7 @@ export default async function handler(req, res) {
       await insertPaymentEvent({
         source: 'create-payment',
         status: 'error',
-        statusDetail: data?.message || data?.error || 'mp_create_payment_failed',
+        statusDetail: data?.message || data?.error || response.statusText || 'mp_create_payment_failed',
         paymentMethodId: paymentMethodId,
         amount: Number(transactionAmount.toFixed(2)),
         externalReference: payload.external_reference,
@@ -160,7 +166,7 @@ export default async function handler(req, res) {
 
       return res.status(response.status).json({
         error: 'Mercado Pago payment creation failed',
-        details: data
+        details: data || { message: response.statusText || 'Empty response from Mercado Pago' }
       });
     }
 
