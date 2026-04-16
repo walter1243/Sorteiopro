@@ -322,66 +322,246 @@ function closeFullscreenPicker() {
   ui.raffleFullscreenPicker.classList.add('hidden');
 }
 
-function ensureMercadoPagoClient() {
-  if (mpClient) {
-    return mpClient;
-  }
-
-  if (!window.MercadoPago || !MP_CONFIG.PUBLIC_KEY) {
-    throw new Error('SDK do Mercado Pago indisponivel.');
-  }
-
-  mpClient = new window.MercadoPago(MP_CONFIG.PUBLIC_KEY, { locale: 'pt-BR' });
-  return mpClient;
-}
-
 async function closePaymentModal() {
   ui.paymentModal.classList.add('hidden');
+  resetPaymentModal();
   if (pixStatusPollTimer) {
     clearInterval(pixStatusPollTimer);
     pixStatusPollTimer = null;
   }
-  if (paymentBrickController) {
-    await paymentBrickController.unmount();
-    paymentBrickController = null;
+}
+
+function resetPaymentModal() {
+  // Reset Step 1
+  const methodBtns = document.querySelectorAll('.payment-method-btn');
+  methodBtns.forEach(btn => btn.classList.remove('active'));
+  
+  // Show step 1, hide others
+  document.getElementById('payment-step-1').classList.remove('hidden');
+  document.getElementById('payment-step-2-card').classList.add('hidden');
+  document.getElementById('payment-step-2-pix').classList.add('hidden');
+  document.getElementById('payment-loading').classList.add('hidden');
+  document.getElementById('payment-success').classList.add('hidden');
+  
+  // Reset form
+  document.getElementById('card-payment-form').reset();
+  document.getElementById('card-holder-name').value = '';
+  document.getElementById('card-number').value = '';
+  document.getElementById('card-expiry').value = '';
+  document.getElementById('card-cvv').value = '';
+}
+
+async function openPaymentModal(checkoutContext) {
+  state.checkoutContext = checkoutContext;
+  resetPaymentModal();
+  ui.paymentModal.classList.remove('hidden');
+  
+  // Add event listeners for payment method selection
+  document.getElementById('payment-method-pix').addEventListener('click', () => selectPaymentMethod('pix'));
+  document.getElementById('payment-method-card').addEventListener('click', () => selectPaymentMethod('card'));
+}
+
+function selectPaymentMethod(method) {
+  // Update active button
+  const methodBtns = document.querySelectorAll('.payment-method-btn');
+  methodBtns.forEach(btn => {
+    if (btn.dataset.method === method) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+  
+  // Show corresponding step 2
+  document.getElementById('payment-step-1').classList.add('hidden');
+  document.getElementById('payment-step-2-card').classList.toggle('hidden', method !== 'card');
+  document.getElementById('payment-step-2-pix').classList.toggle('hidden', method !== 'pix');
+  
+  if (method === 'pix') {
+    generatePixCode();
   }
 }
 
-async function openEmbeddedCheckout(checkoutContext) {
-  const mp = ensureMercadoPagoClient();
-  const bricksBuilder = mp.bricks();
+function generatePixCode() {
+  // Generate a fake PIX key (in production, get from backend)
+  const pixKey = `00020126580014br.gov.bcb.pixkey0123456789abcdef52040000530398654061${(state.checkoutContext.totalAmount * 100).toFixed(0).padStart(10, '0')}5303986540612345678901234567890123456789`;
+  const pixQR = document.getElementById('pix-qr-code');
+  const pixKeyTextarea = document.getElementById('pix-key');
+  
+  // In production, generate QR code from backend using a library like qrcode.js
+  pixQR.innerHTML = '📱 <br> QR Code<br> (Gerado)';
+  pixKeyTextarea.value = pixKey;
+  
+  // Add copy button listener
+  document.getElementById('copy-pix-key-btn').addEventListener('click', () => {
+    pixKeyTextarea.select();
+    document.execCommand('copy');
+    showToast('Chave PIX copiada!');
+  });
+}
 
-  if (paymentBrickController) {
-    await paymentBrickController.unmount();
-    paymentBrickController = null;
+async function processCardPayment(cardHolder, cardNumber, expiry, cvv) {
+  const checkoutContext = state.checkoutContext;
+  if (!checkoutContext) {
+    throw new Error('Checkout sem contexto.');
   }
 
-  state.checkoutContext = checkoutContext;
-  ui.paymentModal.classList.remove('hidden');
-
-  paymentBrickController = await bricksBuilder.create('payment', 'payment-brick-container', {
-    initialization: {
-      amount: Number(checkoutContext.totalAmount.toFixed(2)),
-      payer: {
-        email: checkoutContext.buyer.email
+  // Format card data
+  const [expiryMonth, expiryYear] = expiry.split('/');
+  const cardPayload = {
+    transaction_amount: Number(checkoutContext.totalAmount.toFixed(2)),
+    description: `Rifa - ${checkoutContext.product.prizeName || checkoutContext.product.title}`,
+    payment_method_id: 'card',
+    payer: {
+      email: checkoutContext.buyer.email,
+      first_name: checkoutContext.buyer.name.split(' ')[0] || checkoutContext.buyer.name,
+      last_name: checkoutContext.buyer.name.split(' ').slice(1).join(' ') || '-',
+      identification: {
+        type: 'CPF',
+        number: checkoutContext.buyer.cpf.replace(/\D/g, '')
       }
     },
-    customization: {
-      paymentMethods: {
-        ticket: 'none',
-        debitCard: 'none',
-        maxInstallments: 12
+    card: {
+      number: cardNumber.replace(/\s/g, ''),
+      expiration_month: expiryMonth,
+      expiration_year: expiryYear,
+      security_code: cvv,
+      cardholder: {
+        name: cardHolder
       }
     },
-    callbacks: {
-      onReady: () => {},
-      onSubmit: async ({ formData }) => processEmbeddedPayment(formData),
-      onError: (error) => {
-        console.error(error);
-        showToast('Erro ao iniciar checkout integrado.');
-      }
+    external_reference: `${checkoutContext.product.id}|${checkoutContext.selectedNumbers.join(',')}`,
+    metadata: {
+      raffleId: checkoutContext.product.id,
+      selectedNumbers: checkoutContext.selectedNumbers.join(',')
     }
-  });
+  };
+
+  showLoadingAnimation(true);
+  
+  try {
+    const paymentResponse = await fetch('/api/create-payment', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(cardPayload)
+    });
+
+    const payment = await paymentResponse.json();
+    
+    if (!paymentResponse.ok) {
+      throw new Error(payment?.message || 'Erro ao processar pagamento.');
+    }
+
+    checkoutContext.paymentMethod = 'card';
+    checkoutContext.paymentId = payment.id;
+
+    if (payment.status === 'approved') {
+      await saveApprovedTickets(checkoutContext);
+      await applyPrizeClaimFlow(checkoutContext);
+      state.selectedNumbers = [];
+      showSuccessMessage('Pagamento aprovado! Suas cotas foram compradas.');
+      return;
+    }
+
+    throw new Error(`Pagamento em status: ${payment.status}`);
+  } finally {
+    showLoadingAnimation(false);
+  }
+}
+
+async function processPixPayment() {
+  const checkoutContext = state.checkoutContext;
+  if (!checkoutContext) {
+    throw new Error('Checkout sem contexto.');
+  }
+
+  const pixPayload = {
+    transaction_amount: Number(checkoutContext.totalAmount.toFixed(2)),
+    description: `Rifa - ${checkoutContext.product.prizeName || checkoutContext.product.title}`,
+    payment_method_id: 'pix',
+    payer: {
+      email: checkoutContext.buyer.email,
+      first_name: checkoutContext.buyer.name.split(' ')[0] || checkoutContext.buyer.name,
+      last_name: checkoutContext.buyer.name.split(' ').slice(1).join(' ') || '-',
+      identification: {
+        type: 'CPF',
+        number: checkoutContext.buyer.cpf.replace(/\D/g, '')
+      }
+    },
+    external_reference: `${checkoutContext.product.id}|${checkoutContext.selectedNumbers.join(',')}`,
+    metadata: {
+      raffleId: checkoutContext.product.id,
+      selectedNumbers: checkoutContext.selectedNumbers.join(',')
+    }
+  };
+
+  showLoadingAnimation(true);
+
+  try {
+    const paymentResponse = await fetch('/api/create-payment', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(pixPayload)
+    });
+
+    const payment = await paymentResponse.json();
+
+    if (!paymentResponse.ok) {
+      throw new Error(payment?.message || 'Erro ao gerar PIX.');
+    }
+
+    checkoutContext.paymentMethod = 'pix';
+    checkoutContext.paymentId = payment.id;
+
+    if (payment.status === 'pending' && payment.payment_method_id === 'pix') {
+      showLoadingAnimation(false);
+      showSuccessMessage('PIX gerado! Processe o pagamento no seu banco e voltaremos a monitorar.');
+      startPixStatusPolling(checkoutContext);
+      return;
+    }
+
+    if (payment.status === 'approved') {
+      await saveApprovedTickets(checkoutContext);
+      await applyPrizeClaimFlow(checkoutContext);
+      state.selectedNumbers = [];
+      showSuccessMessage('PIX aprovado! Suas cotas foram compradas.');
+    }
+  } catch (err) {
+    showLoadingAnimation(false);
+    throw err;
+  }
+}
+
+function showLoadingAnimation(show) {
+  document.getElementById('payment-loading').classList.toggle('hidden', !show);
+  if (show) {
+    document.getElementById('payment-step-1').classList.add('hidden');
+    document.getElementById('payment-step-2-card').classList.add('hidden');
+    document.getElementById('payment-step-2-pix').classList.add('hidden');
+  }
+}
+
+function showSuccessMessage(message) {
+  const successDiv = document.getElementById('payment-success');
+  const messageP = document.getElementById('payment-success-message');
+  
+  messageP.textContent = message;
+  
+  document.getElementById('payment-step-1').classList.add('hidden');
+  document.getElementById('payment-step-2-card').classList.add('hidden');
+  document.getElementById('payment-step-2-pix').classList.add('hidden');
+  document.getElementById('payment-loading').classList.add('hidden');
+  successDiv.classList.remove('hidden');
+  
+  const closeBtn = document.getElementById('success-close-btn');
+  closeBtn.addEventListener('click', async () => {
+    await closePaymentModal();
+    render();
+  }, { once: true });
 }
 
 async function saveApprovedTickets(checkoutContext) {
@@ -486,80 +666,6 @@ function startPixStatusPolling(checkoutContext) {
       console.error(error);
     }
   }, 8000);
-}
-
-async function processEmbeddedPayment(formData) {
-  const checkoutContext = state.checkoutContext;
-  if (!checkoutContext) {
-    throw new Error('Checkout sem contexto.');
-  }
-
-  const cpfDigits = checkoutContext.buyer.cpf.replace(/\D/g, '');
-  const paymentPayload = {
-    transaction_amount: Number(checkoutContext.totalAmount.toFixed(2)),
-    description: `Rifa - ${checkoutContext.product.prizeName || checkoutContext.product.title}`,
-    payment_method_id: formData.payment_method_id,
-    payer: {
-      email: checkoutContext.buyer.email,
-      first_name: checkoutContext.buyer.name.split(' ')[0] || checkoutContext.buyer.name,
-      last_name: checkoutContext.buyer.name.split(' ').slice(1).join(' ') || '-',
-      identification: {
-        type: 'CPF',
-        number: cpfDigits
-      }
-    },
-    external_reference: `${checkoutContext.product.id}|${checkoutContext.selectedNumbers.join(',')}`,
-    metadata: {
-      raffleId: checkoutContext.product.id,
-      selectedNumbers: checkoutContext.selectedNumbers.join(',')
-    }
-  };
-
-  if (formData.token) {
-    paymentPayload.token = formData.token;
-  }
-  if (formData.installments) {
-    paymentPayload.installments = Number(formData.installments);
-  }
-  if (formData.issuer_id) {
-    paymentPayload.issuer_id = formData.issuer_id;
-  }
-
-  const paymentResponse = await fetch('/api/create-payment', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(paymentPayload)
-  });
-
-  const payment = await paymentResponse.json();
-  if (!paymentResponse.ok) {
-    const message = payment?.message || 'Pagamento nao aprovado.';
-    throw new Error(message);
-  }
-
-  checkoutContext.paymentMethod = payment.payment_method_id;
-  checkoutContext.paymentId = payment.id;
-
-  if (payment.status === 'approved') {
-    await saveApprovedTickets(checkoutContext);
-    await applyPrizeClaimFlow(checkoutContext);
-
-    state.selectedNumbers = [];
-    await closePaymentModal();
-    render();
-    showToast('Pagamento aprovado e cotas liberadas.');
-    return;
-  }
-
-  if (payment.status === 'pending' && payment.payment_method_id === 'pix') {
-    showToast('PIX gerado. A cota sera liberada somente apos confirmacao do Mercado Pago.');
-    startPixStatusPolling(checkoutContext);
-    return;
-  }
-
-  showToast(`Pagamento com status: ${payment.status || 'desconhecido'}.`);
 }
 
 function renderQuotaGrid() {
@@ -887,7 +993,7 @@ async function processCheckout(event) {
       }
     };
 
-    await openEmbeddedCheckout(checkoutContext);
+    await openPaymentModal(checkoutContext);
   } catch (err) {
     console.error(err);
     showToast(err?.message || 'Erro ao processar checkout.');
@@ -927,6 +1033,53 @@ async function init() {
       closePaymentModal();
     }
   });
+
+  // Card form submission
+  document.getElementById('card-payment-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      const cardHolder = document.getElementById('card-holder-name').value.trim();
+      const cardNumber = document.getElementById('card-number').value.trim();
+      const cardExpiry = document.getElementById('card-expiry').value.trim();
+      const cardCvv = document.getElementById('card-cvv').value.trim();
+
+      if (!cardHolder || !cardNumber || !cardExpiry || !cardCvv) {
+        showToast('Preencha todos os campos do cartão.');
+        return;
+      }
+
+      await processCardPayment(cardHolder, cardNumber, cardExpiry, cardCvv);
+    } catch (error) {
+      console.error(error);
+      showToast(error?.message || 'Erro ao processar cartão.');
+    }
+  });
+
+  // Back buttons to payment method selection
+  document.getElementById('back-to-methods-card').addEventListener('click', () => {
+    selectPaymentMethod('');
+    document.getElementById('payment-step-1').classList.remove('hidden');
+    document.getElementById('payment-step-2-card').classList.add('hidden');
+    document.querySelectorAll('.payment-method-btn').forEach(btn => btn.classList.remove('active'));
+  });
+
+  document.getElementById('back-to-methods-pix').addEventListener('click', () => {
+    selectPaymentMethod('');
+    document.getElementById('payment-step-1').classList.remove('hidden');
+    document.getElementById('payment-step-2-pix').classList.add('hidden');
+    document.querySelectorAll('.payment-method-btn').forEach(btn => btn.classList.remove('active'));
+  });
+
+  // Confirm PIX payment
+  document.getElementById('confirm-pix-payment-btn').addEventListener('click', async () => {
+    try {
+      await processPixPayment();
+    } catch (error) {
+      console.error(error);
+      showToast(error?.message || 'Erro ao processar PIX.');
+    }
+  });
+
   ui.closePrizeClaimBtn.addEventListener('click', closePrizeClaimModal);
   ui.prizeClaimModal.addEventListener('click', (event) => {
     if (event.target === ui.prizeClaimModal) {

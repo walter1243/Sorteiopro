@@ -125,19 +125,82 @@
     </div>
   </div>
 
+  <!-- PAYMENT MODAL: Custom 2-step checkout -->
   <div id="payment-modal" class="overlay hidden">
     <div class="modal panel payment-modal-box">
       <div class="panel-head">
-        <h3>Checkout</h3>
+        <h3 id="payment-modal-title">Finalizar Pagamento</h3>
         <button id="close-payment-modal" type="button" class="ghost-action">Fechar</button>
       </div>
-      <p class="muted">Escolha Cartao ou PIX e finalize o pagamento sem sair da pagina.</p>
-      <div id="payment-brick-container"></div>
+
+      <!-- STEP 1: Choose Payment Method -->
+      <div id="payment-step-1" class="payment-step">
+        <p class="muted">Escolha a forma de pagamento:</p>
+        <div class="payment-methods-grid">
+          <button id="payment-method-pix" class="payment-method-btn" data-method="pix">
+            <span class="method-icon">📱</span>
+            <span class="method-name">Pix</span>
+            <span class="method-desc">Qualquer banco</span>
+          </button>
+          <button id="payment-method-card" class="payment-method-btn" data-method="card">
+            <span class="method-icon">💳</span>
+            <span class="method-name">Cartão</span>
+            <span class="method-desc">Débito ou Crédito</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Card Details (shown only for card payment) -->
+      <div id="payment-step-2-card" class="payment-step hidden">
+        <form id="card-payment-form">
+          <input id="card-holder-name" placeholder="Nome do titulador" required />
+          <input id="card-number" placeholder="Número do cartão" maxlength="19" inputmode="numeric" required />
+          <div class="card-row">
+            <input id="card-expiry" placeholder="MM/AA" maxlength="5" inputmode="numeric" required />
+            <input id="card-cvv" placeholder="CVV" maxlength="4" inputmode="numeric" required />
+          </div>
+          <div class="payment-terms">
+            <label class="checkbox">
+              <input id="card-agree-terms" type="checkbox" required />
+              <span>Autorizo o débito no cartão informado.</span>
+            </label>
+          </div>
+          <button type="submit" class="payment-confirm-btn">Confirmar Pagamento</button>
+          <button id="back-to-methods-card" type="button" class="ghost-action">← Voltar</button>
+        </form>
+      </div>
+
+      <!-- STEP 2: PIX Details (shown only for PIX payment) -->
+      <div id="payment-step-2-pix" class="payment-step hidden">
+        <div class="pix-container">
+          <p class="pix-instruction">Escaneie o QR Code ou copie a chave:</p>
+          <div id="pix-qr-code" class="pix-qr-code"></div>
+          <textarea id="pix-key" readonly class="pix-key-textarea" placeholder="Chave Pix (será gerada)"></textarea>
+          <button id="copy-pix-key-btn" type="button" class="copy-btn">Copiar Chave</button>
+          <p class="pix-instruction" style="font-size: 0.9em; margin-top: 1.5rem;">Após fazer o Pix, clique em confirmar pagamento:</p>
+          <button id="confirm-pix-payment-btn" type="button" class="payment-confirm-btn">Confirmar Pagamento Recebido</button>
+          <button id="back-to-methods-pix" type="button" class="ghost-action">← Voltar</button>
+        </div>
+      </div>
+
+      <!-- LOADING ANIMATION -->
+      <div id="payment-loading" class="payment-loading hidden">
+        <div class="spinner"></div>
+        <p>Processando sua compra...</p>
+      </div>
+
+      <!-- SUCCESS MESSAGE -->
+      <div id="payment-success" class="payment-success hidden">
+        <div class="success-icon">✅</div>
+        <h4>Cota Comprada!</h4>
+        <p id="payment-success-message" class="muted"></p>
+        <button id="success-close-btn" type="button" class="primary-btn">Fechar</button>
+      </div>
+
     </div>
   </div>
 
   <div id="toast" class="toast"></div>
-  <script src="https://sdk.mercadopago.com/js/v2"></script>
   <script type="module" src="assets/js/cliente.js"></script>
 </body>
 </html>
