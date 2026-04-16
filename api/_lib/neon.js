@@ -113,11 +113,17 @@ export async function ensureBusinessSchema() {
       title TEXT NOT NULL,
       price NUMERIC(12,2) NOT NULL,
       total_quotas INTEGER,
+      cover_image_url TEXT,
       status TEXT,
       raw_payload JSONB,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+
+  await sql`
+    ALTER TABLE rifas
+    ADD COLUMN IF NOT EXISTS cover_image_url TEXT
   `;
 
   await sql`
@@ -143,6 +149,22 @@ export async function ensureBusinessSchema() {
   `;
 
   await sql`
+    CREATE TABLE IF NOT EXISTS rifa_images (
+      id BIGSERIAL PRIMARY KEY,
+      raffle_id TEXT NOT NULL REFERENCES rifas(id) ON DELETE CASCADE,
+      image_url TEXT NOT NULL,
+      storage_key TEXT,
+      caption TEXT,
+      position INTEGER NOT NULL DEFAULT 0,
+      is_cover BOOLEAN NOT NULL DEFAULT FALSE,
+      mime_type TEXT,
+      size_bytes BIGINT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  await sql`
     CREATE INDEX IF NOT EXISTS idx_pedidos_raffle_id
     ON pedidos (raffle_id)
   `;
@@ -150,6 +172,16 @@ export async function ensureBusinessSchema() {
   await sql`
     CREATE INDEX IF NOT EXISTS idx_pedidos_payment_id
     ON pedidos (payment_id)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_rifa_images_raffle_id
+    ON rifa_images (raffle_id)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_rifa_images_cover
+    ON rifa_images (raffle_id, is_cover)
   `;
 
   businessSchemaReady = true;
@@ -165,6 +197,7 @@ export async function upsertRifa(raffle) {
       title,
       price,
       total_quotas,
+      cover_image_url,
       status,
       raw_payload,
       updated_at
@@ -173,6 +206,7 @@ export async function upsertRifa(raffle) {
       ${raffle.title || 'Rifa sem titulo'},
       ${Number(raffle.price || 0)},
       ${Number.isFinite(Number(raffle.totalQuotas)) ? Number(raffle.totalQuotas) : null},
+      ${raffle.coverImageUrl || null},
       ${raffle.status || null},
       ${raffle.rawPayload || {}},
       NOW()
@@ -182,10 +216,72 @@ export async function upsertRifa(raffle) {
       title = EXCLUDED.title,
       price = EXCLUDED.price,
       total_quotas = EXCLUDED.total_quotas,
+      cover_image_url = COALESCE(EXCLUDED.cover_image_url, rifas.cover_image_url),
       status = EXCLUDED.status,
       raw_payload = EXCLUDED.raw_payload,
       updated_at = NOW()
   `;
+}
+
+export async function addRifaImage(image) {
+  const sql = requireSqlClient();
+  await ensureBusinessSchema();
+
+  const rows = await sql`
+    INSERT INTO rifa_images (
+      raffle_id,
+      image_url,
+      storage_key,
+      caption,
+      position,
+      is_cover,
+      mime_type,
+      size_bytes,
+      updated_at
+    ) VALUES (
+      ${image.raffleId},
+      ${image.imageUrl},
+      ${image.storageKey || null},
+      ${image.caption || null},
+      ${Number.isFinite(Number(image.position)) ? Number(image.position) : 0},
+      ${Boolean(image.isCover)},
+      ${image.mimeType || null},
+      ${Number.isFinite(Number(image.sizeBytes)) ? Number(image.sizeBytes) : null},
+      NOW()
+    )
+    RETURNING id
+  `;
+
+  if (image.isCover) {
+    await sql`
+      UPDATE rifa_images
+      SET is_cover = FALSE, updated_at = NOW()
+      WHERE raffle_id = ${image.raffleId}
+      AND id <> ${rows?.[0]?.id || 0}
+    `;
+
+    await sql`
+      UPDATE rifas
+      SET cover_image_url = ${image.imageUrl}, updated_at = NOW()
+      WHERE id = ${image.raffleId}
+    `;
+  }
+
+  return rows?.[0]?.id || null;
+}
+
+export async function listRifaImages(raffleId) {
+  const sql = requireSqlClient();
+  await ensureBusinessSchema();
+
+  const rows = await sql`
+    SELECT id, raffle_id, image_url, storage_key, caption, position, is_cover, mime_type, size_bytes, created_at, updated_at
+    FROM rifa_images
+    WHERE raffle_id = ${raffleId}
+    ORDER BY is_cover DESC, position ASC, id ASC
+  `;
+
+  return rows || [];
 }
 
 export async function createPedido(pedido) {

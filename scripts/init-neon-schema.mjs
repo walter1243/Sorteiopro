@@ -16,11 +16,17 @@ async function run() {
       title TEXT NOT NULL,
       price NUMERIC(12,2) NOT NULL,
       total_quotas INTEGER,
+      cover_image_url TEXT,
       status TEXT,
       raw_payload JSONB,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+
+  await sql`
+    ALTER TABLE rifas
+    ADD COLUMN IF NOT EXISTS cover_image_url TEXT
   `;
 
   await sql`
@@ -46,6 +52,22 @@ async function run() {
   `;
 
   await sql`
+    CREATE TABLE IF NOT EXISTS rifa_images (
+      id BIGSERIAL PRIMARY KEY,
+      raffle_id TEXT NOT NULL REFERENCES rifas(id) ON DELETE CASCADE,
+      image_url TEXT NOT NULL,
+      storage_key TEXT,
+      caption TEXT,
+      position INTEGER NOT NULL DEFAULT 0,
+      is_cover BOOLEAN NOT NULL DEFAULT FALSE,
+      mime_type TEXT,
+      size_bytes BIGINT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  await sql`
     CREATE INDEX IF NOT EXISTS idx_pedidos_raffle_id
     ON pedidos (raffle_id)
   `;
@@ -60,7 +82,17 @@ async function run() {
     ON pedidos (external_reference)
   `;
 
-  console.log('Schema Neon criado com sucesso: tabelas rifas e pedidos.');
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_rifa_images_raffle_id
+    ON rifa_images (raffle_id)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_rifa_images_cover
+    ON rifa_images (raffle_id, is_cover)
+  `;
+
+  console.log('Schema Neon criado com sucesso: tabelas rifas, pedidos e rifa_images.');
 }
 
 run().catch((error) => {
