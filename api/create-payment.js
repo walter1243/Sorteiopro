@@ -24,6 +24,12 @@ function sanitizeExternalReference(value) {
     .slice(0, 240);
 }
 
+function buildIdempotencyKey(externalReference) {
+  const safeRef = String(externalReference || 'payment').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 48);
+  const rand = Math.random().toString(36).slice(2, 10);
+  return `${safeRef}-${Date.now()}-${rand}`;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -114,7 +120,8 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': buildIdempotencyKey(externalReference)
       },
       body: JSON.stringify(payload)
     });
