@@ -2,7 +2,11 @@ const MP_API_BASE = 'https://api.mercadopago.com';
 import { insertPaymentEvent } from './_lib/neon.js';
 
 function getAccessToken() {
-  const token = process.env.MP_ACCESS_TOKEN || process.env.MERCADO_PAGO_ACCESS_TOKEN;
+  const token =
+    process.env.MP_ACCESS_TOKEN ||
+    process.env.MERCADO_PAGO_ACCESS_TOKEN ||
+    process.env.AccessToken ||
+    process.env.ACCESS_TOKEN;
   if (!token) {
     throw new Error('Missing MP_ACCESS_TOKEN environment variable');
   }
