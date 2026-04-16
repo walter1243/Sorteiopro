@@ -30,6 +30,10 @@ function buildIdempotencyKey(externalReference) {
   return `${safeRef}-${Date.now()}-${rand}`;
 }
 
+function getNotificationUrl() {
+  return process.env.MP_WEBHOOK_URL || 'https://sorteiopro-olive.vercel.app/api/webhook';
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -60,6 +64,7 @@ export default async function handler(req, res) {
       transaction_amount: Number(transactionAmount.toFixed(2)),
       description: String(body.description || 'Pagamento de rifa').slice(0, 256),
       payment_method_id: paymentMethodId,
+      notification_url: getNotificationUrl(),
       payer: {
         email: payerEmail,
         first_name: String(payer.first_name || '').slice(0, 120),
