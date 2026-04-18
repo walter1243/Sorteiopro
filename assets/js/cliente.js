@@ -78,6 +78,7 @@ let liveFeedTimer = null;
 let mpClient = null;
 let paymentBrickController = null;
 let pixStatusPollTimer = null;
+let isPixGenerationInFlight = false;
 const WINNER_DISPLAY_MS = 3 * 24 * 60 * 60 * 1000;
 const DEFAULT_PRIZE_WHATSAPP_NUMBER = '5563991133386';
 
@@ -349,6 +350,18 @@ function resetPaymentModal() {
   document.getElementById('card-number').value = '';
   document.getElementById('card-expiry').value = '';
   document.getElementById('card-cvv').value = '';
+
+  // Reset PIX display
+  const pixQrEl = document.getElementById('pix-qr-code');
+  const pixKeyEl = document.getElementById('pix-key');
+  if (pixQrEl) {
+    pixQrEl.innerHTML = '';
+  }
+  if (pixKeyEl) {
+    pixKeyEl.value = '';
+  }
+
+  isPixGenerationInFlight = false;
 }
 
 async function openPaymentModal(checkoutContext) {
@@ -356,9 +369,9 @@ async function openPaymentModal(checkoutContext) {
   resetPaymentModal();
   ui.paymentModal.classList.remove('hidden');
   
-  // Add event listeners for payment method selection
-  document.getElementById('payment-method-pix').addEventListener('click', () => selectPaymentMethod('pix'));
-  document.getElementById('payment-method-card').addEventListener('click', () => selectPaymentMethod('card'));
+  // Set handlers directly to avoid duplicated listeners after re-opening modal
+  document.getElementById('payment-method-pix').onclick = () => selectPaymentMethod('pix');
+  document.getElementById('payment-method-card').onclick = () => selectPaymentMethod('card');
 }
 
 function selectPaymentMethod(method) {
@@ -377,7 +390,13 @@ function selectPaymentMethod(method) {
   document.getElementById('payment-step-2-card').classList.toggle('hidden', method !== 'card');
   document.getElementById('payment-step-2-pix').classList.toggle('hidden', method !== 'pix');
   
-  // For PIX, we'll generate the QR code after the user confirms payment
+  // Generate PIX immediately when user selects PIX to avoid blank waiting state.
+  if (method === 'pix' && state.checkoutContext && !state.checkoutContext.paymentId && !isPixGenerationInFlight) {
+    processPixPayment().catch((error) => {
+      console.error(error);
+      showToast(error?.message || 'Erro ao gerar PIX.');
+    });
+  }
 }
 
 function generatePixCode(pixQrCodeString, pixQrCodeBase64) {
@@ -543,6 +562,11 @@ async function processPixPayment() {
     throw new Error('Checkout sem contexto.');
   }
 
+  if (isPixGenerationInFlight) {
+    return;
+  }
+  isPixGenerationInFlight = true;
+
   // Validate CPF format
   const cpfDigits = checkoutContext.buyer.cpf.replace(/\D/g, '');
   if (cpfDigits.length !== 11) {
@@ -658,6 +682,8 @@ async function processPixPayment() {
   } catch (err) {
     showLoadingAnimation(false);
     throw err;
+  } finally {
+    isPixGenerationInFlight = false;
   }
 }
 
@@ -1198,7 +1224,31 @@ async function init() {
   // Confirm PIX payment
   document.getElementById('confirm-pix-payment-btn').addEventListener('click', async () => {
     try {
-      await processPixPayment();
+      const checkoutContext = state.checkoutContext;
+      if (!checkoutContext) {
+        showToast('Checkout sem contexto.');
+        return;
+      }
+
+      // If PIX is not generated yet, generate it.
+      if (!checkoutContext.paymentId) {
+        await processPixPayment();
+        return;
+      }
+
+      // If already generated, this button checks whether payment has been approved.
+      const statusData = await fetchPaymentStatus(checkoutContext.paymentId);
+      const status = String(statusData.status || '').toLowerCase();
+      if (status === 'approved') {
+        await saveApprovedTickets(checkoutContext);
+        await applyPrizeClaimFlow(checkoutContext);
+        state.selectedNumbers = [];
+        render();
+        showToast('PIX aprovado! Cotas liberadas com sucesso.');
+        return;
+      }
+
+      showToast('Pagamento ainda pendente. Aguarde alguns segundos e tente novamente.');
     } catch (error) {
       console.error(error);
       showToast(error?.message || 'Erro ao processar PIX.');
