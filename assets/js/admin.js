@@ -27,7 +27,8 @@ const ui = {
   menuLinks: [...document.querySelectorAll('.admin-menu-link')],
   sections: {
     'section-config': document.getElementById('section-config'),
-    'section-buyers': document.getElementById('section-buyers')
+    'section-buyers': document.getElementById('section-buyers'),
+    'section-site': document.getElementById('section-site')
   },
   panel: document.getElementById('admin-panel'),
   logoutBtn: document.getElementById('logout-btn'),
@@ -62,7 +63,9 @@ const ui = {
   ticketDetailName: document.getElementById('ticket-detail-name'),
   ticketDetailEmail: document.getElementById('ticket-detail-email'),
   ticketDetailStatus: document.getElementById('ticket-detail-status'),
-  ticketDetailDate: document.getElementById('ticket-detail-date')
+  ticketDetailDate: document.getElementById('ticket-detail-date'),
+  siteConfigForm: document.getElementById('site-config-form'),
+  siteWhatsapp: document.getElementById('site-whatsapp')
 };
 
 const state = {
@@ -468,6 +471,23 @@ function showAdminSection(sectionId) {
   });
 }
 
+function subscribeSiteConfig() {
+  const ref = doc(db, 'artifacts', appId, 'public', 'data', 'siteConfig', 'main');
+  onSnapshot(ref, (snap) => {
+    if (snap.exists()) {
+      ui.siteWhatsapp.value = snap.data().whatsapp || '';
+    }
+  });
+}
+
+async function onSaveSiteConfig(event) {
+  event.preventDefault();
+  const whatsapp = ui.siteWhatsapp.value.replace(/\D/g, '');
+  const ref = doc(db, 'artifacts', appId, 'public', 'data', 'siteConfig', 'main');
+  await setDoc(ref, { whatsapp });
+  showToast('Configurações do site salvas.');
+}
+
 async function persistCatalog(updated) {
   const ref = doc(db, 'artifacts', appId, 'public', 'data', 'raffle', 'catalog');
   await setDoc(ref, { items: updated });
@@ -765,6 +785,7 @@ async function init() {
   try {
     state.user = await ensureAuth();
     subscribeCatalog();
+    subscribeSiteConfig();
     showAdminSection('section-config');
   } catch (error) {
     console.error(error);
@@ -773,6 +794,8 @@ async function init() {
     renderBuyers();
     showAdminSection('section-config');
   }
+
+  ui.siteConfigForm.addEventListener('submit', onSaveSiteConfig);
 }
 
 closePanel();

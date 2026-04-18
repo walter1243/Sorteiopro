@@ -50,6 +50,7 @@
             <div class="admin-menu-list">
               <button class="admin-menu-link" data-target="section-config" type="button">Configuracao da rifa</button>
               <button class="admin-menu-link" data-target="section-buyers" type="button">Compradores e sorteio</button>
+              <button class="admin-menu-link" data-target="section-site" type="button">Configurações do site</button>
             </div>
             <div class="admin-menu-footer">
               <button id="logout-btn" class="ghost admin-logout-btn">Sair do painel</button>
@@ -186,6 +187,17 @@
               </div>
             </div>
             <p id="winner-box" class="winner muted"></p>
+
+                    <section class="panel admin-card admin-section hidden" id="section-site">
+                      <h3>Configurações do Site</h3>
+                      <form id="site-config-form">
+                        <label>WhatsApp do dono (com DDI, ex: 5563999999999)
+                          <input id="site-whatsapp" placeholder="Ex: 5563991133386" inputmode="numeric" />
+                        </label>
+                        <button type="submit">Salvar Configurações do Site</button>
+                      </form>
+                      <p class="muted">Este número aparece no botão flutuante de WhatsApp na página do cliente.</p>
+                    </section>
           </section>
         </section>
       </div>

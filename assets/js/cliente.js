@@ -57,12 +57,14 @@ const ui = {
   liveFeedList: document.getElementById('live-feed-list'),
   cookieModal: document.getElementById('cookie-lgpd-modal'),
   cookieCheck: document.getElementById('cookie-consent-check'),
-  cookieBtn: document.getElementById('cookie-consent-btn')
+  cookieBtn: document.getElementById('cookie-consent-btn'),
+  whatsappFloatBtn: document.getElementById('whatsapp-float-btn')
 };
 
 const state = {
   user: null,
   raffles: DEFAULT_RAFFLES,
+  siteWhatsapp: '',
   selectedRaffleId: DEFAULT_RAFFLES[0].id,
   soldTickets: {},
   selectedNumbers: [],
@@ -1160,6 +1162,15 @@ async function processCheckout(event) {
   }
 }
 
+function subscribeSiteConfig() {
+  const ref = doc(db, 'artifacts', appId, 'public', 'data', 'siteConfig', 'main');
+  onSnapshot(ref, (snap) => {
+    const number = (snap.exists() && snap.data().whatsapp) ? snap.data().whatsapp : DEFAULT_PRIZE_WHATSAPP_NUMBER;
+    state.siteWhatsapp = number;
+    ui.whatsappFloatBtn.href = `https://wa.me/${number}`;
+  });
+}
+
 async function init() {
   ui.closeMyTicketsPopupBtn.addEventListener('click', () => {
     state.activeTab = 'shop';
@@ -1270,6 +1281,27 @@ async function init() {
   });
   ui.sendPrizeClaimBtn.addEventListener('click', onSendPrizeClaim);
 
+  // Info modals
+  document.querySelectorAll('.footer-link[data-modal]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const modal = document.getElementById(btn.dataset.modal);
+      if (modal) { modal.classList.remove('hidden'); }
+    });
+  });
+  document.querySelectorAll('.info-modal-close[data-close]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const modal = document.getElementById(btn.dataset.close);
+      if (modal) { modal.classList.add('hidden'); }
+    });
+  });
+  document.querySelectorAll('.info-overlay').forEach((overlay) => {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) { overlay.classList.add('hidden'); }
+    });
+  });
+  // WhatsApp float fallback href
+  ui.whatsappFloatBtn.href = `https://wa.me/${DEFAULT_PRIZE_WHATSAPP_NUMBER}`;
+
   setupCookieConsent();
   startLiveFeed();
   ui.checkoutForm.addEventListener('submit', processCheckout);
@@ -1278,6 +1310,7 @@ async function init() {
     state.user = await ensureAuth();
     subscribeCatalog();
     subscribeMyTickets();
+    subscribeSiteConfig();
   } catch (error) {
     console.error(error);
     state.user = { uid: 'cliente_local' };
