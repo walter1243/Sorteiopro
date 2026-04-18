@@ -782,219 +782,216 @@ button:disabled {
   .pix-qr-code {
     width: 160px;
     height: 160px;
-
-  /* ===================== FOOTER ===================== */
-  .site-footer {
-    background: #090d15;
-    border-top: 1px solid #1e2d44;
-    padding: 20px 16px 24px;
-    text-align: center;
-    margin-top: 40px;
   }
+}
 
+/* ===================== FOOTER ===================== */
+.site-footer {
+  background: #090d15;
+  border-top: 1px solid #1e2d44;
+  padding: 20px 16px 24px;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.site-footer-inner {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 420px;
+  margin: 0 auto 12px;
+}
+
+.footer-link {
+  background: #1e88ff;
+  color: #ffffff;
+  border: 1px solid #5badff;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 11px 8px;
+  cursor: pointer;
+}
+
+.footer-link:hover {
+  background: #1570d4;
+}
+
+.footer-sep {
+  display: none;
+}
+
+.site-footer-copy {
+  color: #b9c7dd;
+  font-size: 0.88rem;
+  margin: 4px 0 0;
+}
+
+/* ===================== INFO MODALS ===================== */
+.info-overlay {
+  position: fixed;
+  inset: 0;
+  background: #00000099;
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  animation: fadeInOverlay 0.2s ease;
+}
+
+.info-overlay.hidden {
+  display: none;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.info-modal {
+  width: 100%;
+  max-width: 560px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px 24px 0 0;
+  padding: 0;
+  overflow: hidden;
+  animation: slideUpModal 0.25s ease;
+}
+
+@keyframes slideUpModal {
+  from { transform: translateY(40px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.info-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid #1f2f45;
+  flex-shrink: 0;
+}
+
+.info-modal-head h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: 0.03em;
+}
+
+.info-modal-close {
+  background: #ffffff14;
+  border: 1px solid #ffffff22;
+  color: #c5d9f7;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  font-size: 1rem;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.info-modal-close:hover {
+  background: #ffffff26;
+}
+
+.info-modal-body {
+  padding: 16px 20px 24px;
+  overflow-y: auto;
+  color: var(--muted);
+  font-size: 0.87rem;
+  line-height: 1.65;
+}
+
+.info-modal-body h4 {
+  color: var(--text);
+  margin: 14px 0 6px;
+  font-size: 0.95rem;
+}
+
+.info-modal-body p {
+  margin: 0 0 10px;
+}
+
+.info-modal-body ul,
+.info-modal-body ol {
+  padding-left: 18px;
+  margin: 0 0 10px;
+}
+
+.info-modal-body li {
+  margin-bottom: 6px;
+}
+
+.info-modal-body strong {
+  color: var(--text);
+  font-family: inherit;
+  letter-spacing: 0;
+}
+
+.info-note {
+  background: #111d2e;
+  border: 1px solid #2a3f5a;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  margin-top: 10px !important;
+}
+
+/* ===================== WHATSAPP FLOAT ===================== */
+.whatsapp-float {
+  position: fixed;
+  bottom: 14px;
+  right: 14px;
+  z-index: 150;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 14px #00000055;
+  transition: transform 0.15s ease;
+  text-decoration: none;
+}
+
+.whatsapp-float:hover {
+  transform: scale(1.05);
+}
+
+.whatsapp-float svg {
+  width: 44px;
+  height: 44px;
+  display: block;
+}
+
+@media (max-width: 760px) {
   .site-footer-inner {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-    gap: 6px 10px;
-    margin-bottom: 10px;
+    max-width: 100%;
   }
 
   .footer-link {
-    background: none;
-    border: none;
-    color: #6ea0d6;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-decoration: underline;
-    text-transform: none;
-    letter-spacing: 0;
-    padding: 4px 2px;
-    cursor: pointer;
-  }
-
-  .footer-link:hover {
-    color: #a8ccf0;
-    background: none;
-  }
-
-  .footer-sep {
-    color: #3a4f6a;
-    font-size: 0.85rem;
-    user-select: none;
+    font-size: 0.7rem;
+    padding: 10px 6px;
   }
 
   .site-footer-copy {
-    color: #3d526a;
-    font-size: 0.72rem;
-    margin: 0;
-  }
-
-  /* ===================== INFO MODALS ===================== */
-  .info-overlay {
-    position: fixed;
-    inset: 0;
-    background: #00000099;
-    backdrop-filter: blur(4px);
-    z-index: 200;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    padding: 0;
-    animation: fadeInOverlay 0.2s ease;
-  }
-
-  .info-overlay.hidden {
-    display: none;
-  }
-
-  @keyframes fadeInOverlay {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+    font-size: 0.84rem;
   }
 
   .info-modal {
-    width: 100%;
-    max-width: 560px;
-    max-height: 85vh;
-    display: flex;
-    flex-direction: column;
-    border-radius: 24px 24px 0 0;
-    padding: 0;
-    overflow: hidden;
-    animation: slideUpModal 0.25s ease;
-  }
-
-  @keyframes slideUpModal {
-    from { transform: translateY(40px); opacity: 0; }
-    to   { transform: translateY(0);    opacity: 1; }
-  }
-
-  .info-modal-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 18px 20px 12px;
-    border-bottom: 1px solid #1f2f45;
-    flex-shrink: 0;
-  }
-
-  .info-modal-head h3 {
-    margin: 0;
-    font-size: 1.1rem;
-    letter-spacing: 0.03em;
-  }
-
-  .info-modal-close {
-    background: #ffffff14;
-    border: 1px solid #ffffff22;
-    color: #c5d9f7;
-    border-radius: 50%;
-    width: 34px;
-    height: 34px;
-    font-size: 1rem;
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    flex-shrink: 0;
-    padding: 0;
-    text-transform: none;
-    letter-spacing: 0;
-    font-weight: 400;
-  }
-
-  .info-modal-close:hover {
-    background: #ffffff26;
-  }
-
-  .info-modal-body {
-    padding: 16px 20px 24px;
-    overflow-y: auto;
-    color: var(--muted);
-    font-size: 0.87rem;
-    line-height: 1.65;
-  }
-
-  .info-modal-body h4 {
-    color: var(--text);
-    margin: 14px 0 6px;
-    font-size: 0.95rem;
-  }
-
-  .info-modal-body p {
-    margin: 0 0 10px;
-  }
-
-  .info-modal-body ul,
-  .info-modal-body ol {
-    padding-left: 18px;
-    margin: 0 0 10px;
-  }
-
-  .info-modal-body li {
-    margin-bottom: 6px;
-  }
-
-  .info-modal-body strong {
-    color: var(--text);
-    font-family: inherit;
-    letter-spacing: 0;
-  }
-
-  .info-note {
-    background: #111d2e;
-    border: 1px solid #2a3f5a;
-    border-radius: 10px;
-    padding: 10px 12px;
-    font-size: 0.82rem;
-    margin-top: 10px !important;
-  }
-
-  /* ===================== WHATSAPP FLOAT ===================== */
-  .whatsapp-float {
-    position: fixed;
-    bottom: 22px;
-    right: 18px;
-    z-index: 150;
-    width: 58px;
-    height: 58px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 18px #00000066, 0 0 0 3px #25d36622;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
-    text-decoration: none;
-  }
-
-  .whatsapp-float:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 24px #00000088, 0 0 0 5px #25d36633;
-  }
-
-  .whatsapp-float svg {
-    width: 58px;
-    height: 58px;
-  }
-
-  @media (max-width: 760px) {
-    .info-modal {
-      border-radius: 20px 20px 0 0;
-      max-height: 90vh;
-    }
-
-    .whatsapp-float {
-      bottom: 16px;
-      right: 14px;
-      width: 52px;
-      height: 52px;
-    }
-
-    .whatsapp-float svg {
-      width: 52px;
-      height: 52px;
-    }
-  }
+    border-radius: 20px 20px 0 0;
+    max-height: 90vh;
   }
 }
