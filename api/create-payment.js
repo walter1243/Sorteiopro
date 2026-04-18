@@ -8,12 +8,12 @@ import {
 
 function getAccessToken() {
   const token =
-    process.env.MP_ACCESS_TOKEN ||
-    process.env.AccessToken ||
     process.env.MERCADO_PAGO_ACCESS_TOKEN ||
+    process.env.AccessToken ||
+    process.env.MP_ACCESS_TOKEN ||
     process.env.ACCESS_TOKEN;
   if (!token) {
-    throw new Error('Missing MP_ACCESS_TOKEN environment variable');
+    throw new Error('Missing MERCADO_PAGO_ACCESS_TOKEN environment variable');
   }
   return String(token).trim();
 }
