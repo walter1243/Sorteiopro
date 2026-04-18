@@ -426,6 +426,14 @@ function generatePixCode(pixQrCodeString, pixQrCodeBase64) {
   }, { once: true });
 }
 
+function extractPixData(payment) {
+  const transactionData = payment?.point_of_interaction?.transaction_data;
+  return {
+    qrCode: transactionData?.qr_code || payment?.qr_code || null,
+    qrCodeBase64: transactionData?.qr_code_base64 || payment?.qr_code_base64 || null
+  };
+}
+
 async function processCardPayment(cardHolder, cardNumber, expiry, cvv) {
   const checkoutContext = state.checkoutContext;
   if (!checkoutContext) {
@@ -560,10 +568,28 @@ async function processPixPayment() {
     if (payment.status === 'pending' && payment.payment_method_id === 'pix') {
       showLoadingAnimation(false);
       
-      // Extract PIX QR Code - busca direto de transaction_data
-      const transactionData = payment.point_of_interaction?.transaction_data;
-      const pixQrCode = transactionData?.qr_code || payment.qr_code || null;
-      const pixQrCodeBase64 = transactionData?.qr_code_base64 || payment.qr_code_base64 || null;
+      // Extract PIX QR code from create-payment response
+      let { qrCode: pixQrCode, qrCodeBase64: pixQrCodeBase64 } = extractPixData(payment);
+
+      // Fallback: sometimes MP returns pending first and fills QR moments later
+      if (!pixQrCode && !pixQrCodeBase64) {
+        console.warn('[processPixPayment] QR não veio no create-payment. Tentando payment-status...');
+        for (let attempt = 1; attempt <= 5; attempt += 1) {
+          try {
+            const statusData = await fetchPaymentStatus(payment.id);
+            const extracted = extractPixData(statusData);
+            pixQrCode = extracted.qrCode;
+            pixQrCodeBase64 = extracted.qrCodeBase64;
+            if (pixQrCode || pixQrCodeBase64) {
+              console.log(`[processPixPayment] QR encontrado no payment-status (tentativa ${attempt}).`);
+              break;
+            }
+          } catch (statusError) {
+            console.warn('[processPixPayment] Falha ao buscar payment-status:', statusError?.message || statusError);
+          }
+          await new Promise((resolve) => setTimeout(resolve, 1200));
+        }
+      }
 
       console.log('[processPixPayment] QR Code (string):', pixQrCode ? pixQrCode.substring(0, 50) + '...' : 'NÃO ENCONTRADO');
       console.log('[processPixPayment] QR Code (base64):', pixQrCodeBase64 ? pixQrCodeBase64.substring(0, 30) + '...' : 'NÃO ENCONTRADO');

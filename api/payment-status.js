@@ -94,7 +94,11 @@ export default async function handler(req, res) {
       status_detail: data.status_detail,
       payment_method_id: data.payment_method_id,
       external_reference: data.external_reference,
-      date_approved: data.date_approved || null
+      date_approved: data.date_approved || null,
+      point_of_interaction: data.point_of_interaction || null,
+      qr_code: data.point_of_interaction?.transaction_data?.qr_code || null,
+      qr_code_base64: data.point_of_interaction?.transaction_data?.qr_code_base64 || null,
+      ticket_url: data.point_of_interaction?.transaction_data?.ticket_url || null
     });
   } catch (error) {
     console.error(error);
