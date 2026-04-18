@@ -538,7 +538,8 @@ async function processPixPayment() {
       
       // Extract PIX QR Code from payment response
       const pixQrCode = payment.qr_code || 
-                        payment.point_of_interaction?.transaction_data?.qr_code ||\n                        null;
+            payment.point_of_interaction?.transaction_data?.qr_code ||
+            null;
 
       console.log('[processPixPayment] QR Code extraído:', pixQrCode);
       
