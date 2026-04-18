@@ -1154,25 +1154,18 @@ async function init() {
   startLiveFeed();
   ui.checkoutForm.addEventListener('submit', processCheckout);
 
-  try {
-    state.user = await ensureAuth();
-    // TEMPORARILY DISABLED: subscribeCatalog é lento e fica no Carregando...
-    // subscribeCatalog();
-    // subscribeMyTickets();
-    
-    // Use DEFAULT_RAFFLES enquanto o Neon API não está pronto
-    state.raffles = DEFAULT_RAFFLES;
-    state.selectedRaffleId = DEFAULT_RAFFLES.find((item) => item.status === 'active')?.id || DEFAULT_RAFFLES[0].id;
-    handleActiveRaffleFlow();
-    render();
-  } catch (error) {
-    console.error(error);
-    state.user = { uid: 'local_demo' };
-    state.raffles = DEFAULT_RAFFLES;
-    state.selectedRaffleId = DEFAULT_RAFFLES.find((item) => item.status === 'active')?.id || DEFAULT_RAFFLES[0].id;
-    render();
-    showToast('Falha de conexao com Firebase. Modo local ativo para visualizacao.');
-  }
+  // TEMPORARY DEBUG: Desabilitar Firebase, usar usuário fake
+  // state.user = await ensureAuth();
+  state.user = { uid: 'admin_teste' };
+  
+  // Use DEFAULT_RAFFLES enquanto o Neon API não está pronto
+  state.raffles = DEFAULT_RAFFLES;
+  state.selectedRaffleId = DEFAULT_RAFFLES.find((item) => item.status === 'active')?.id || DEFAULT_RAFFLES[0].id;
+  handleActiveRaffleFlow();
+  render();
+  
+  console.log('[init] App iniciado em modo DEBUG (sem Firebase)');
+  showToast('Modo DEBUG: Firebase desabilitado. Use as rifas padrão para testar.');
 }
 
 init();
