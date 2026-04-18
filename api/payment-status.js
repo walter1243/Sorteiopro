@@ -34,14 +34,41 @@ export default async function handler(req, res) {
       }
     });
 
-    const data = await response.json();
+      // Check status before trying to parse JSON
+      if (response.status === 401 || response.status === 403) {
+        console.error('[payment-status] MP Auth Error (401/403):', {
+          status: response.status,
+          paymentId,
+          token: token ? 'PROVIDED' : 'MISSING'
+        });
+        return res.status(401).json({
+          error: 'Unauthorized with Mercado Pago',
+          details: 'Check MERCADO_PAGO_ACCESS_TOKEN in Vercel environment variables'
+        });
+      }
+
+      let data = null;
+      try {
+        const text = await response.text();
+        data = text ? JSON.parse(text) : null;
+      } catch (parseError) {
+        console.error('[payment-status] Failed to parse MP response:', {
+          status: response.status,
+          error: parseError.message,
+          paymentId
+        });
+        return res.status(500).json({
+          error: 'Failed to parse Mercado Pago response',
+          details: parseError.message
+        });
+      }
 
     if (!response.ok) {
       await insertPaymentEvent({
         source: 'payment-status',
         paymentId,
         status: 'error',
-        statusDetail: data?.message || data?.error || 'mp_status_failed',
+          statusDetail: data?.message || data?.error || `mp_status_failed_${response.status}`,
         rawPayload: {
           response: data
         }

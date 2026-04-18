@@ -139,6 +139,15 @@ export default async function handler(req, res) {
       data = { raw: rawBody };
     }
 
+      // Check for auth errors
+      if (response.status === 401 || response.status === 403) {
+        console.error('[create-payment] MP Auth Error (401/403):', {
+          status: response.status,
+          externalReference,
+          tokenProvided: !!token
+        });
+      }
+
     if (!response.ok) {
       console.error('[create-payment] MP API error:', {
         status: response.status,
