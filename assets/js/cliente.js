@@ -1156,8 +1156,15 @@ async function init() {
 
   try {
     state.user = await ensureAuth();
-    subscribeCatalog();
-    subscribeMyTickets();
+    // TEMPORARILY DISABLED: subscribeCatalog é lento e fica no Carregando...
+    // subscribeCatalog();
+    // subscribeMyTickets();
+    
+    // Use DEFAULT_RAFFLES enquanto o Neon API não está pronto
+    state.raffles = DEFAULT_RAFFLES;
+    state.selectedRaffleId = DEFAULT_RAFFLES.find((item) => item.status === 'active')?.id || DEFAULT_RAFFLES[0].id;
+    handleActiveRaffleFlow();
+    render();
   } catch (error) {
     console.error(error);
     state.user = { uid: 'local_demo' };
