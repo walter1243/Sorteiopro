@@ -140,6 +140,13 @@ export default async function handler(req, res) {
     }
 
     if (!response.ok) {
+      console.error('[create-payment] MP API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        mpResponse: data,
+        mpRequest: payload
+      });
+
       await updatePedidoByExternalReference(externalReference, {
         status: 'payment_failed',
         statusDetail: 'mp_create_payment_failed',
@@ -203,11 +210,16 @@ export default async function handler(req, res) {
       status_detail: data.status_detail,
       payment_method_id: data.payment_method_id,
       point_of_interaction: data.point_of_interaction || null,
-      qr_code: data.point_of_interaction?.qr_code || null,
+      qr_code: data.point_of_interaction?.transaction_data?.qr_code || null,
+      qr_code_base64: data.point_of_interaction?.transaction_data?.qr_code_base64 || null,
       transaction_details: data.transaction_details || null
     });
   } catch (error) {
-    console.error(error);
+    console.error('[create-payment] Exception error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
 
     await insertPaymentEvent({
       source: 'create-payment',

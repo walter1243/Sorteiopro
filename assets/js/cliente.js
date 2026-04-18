@@ -528,6 +528,8 @@ async function processPixPayment() {
       throw new Error(payment?.message || 'Erro ao gerar PIX.');
     }
 
+    console.log('[processPixPayment] Resposta completa:', payment);
+
     checkoutContext.paymentMethod = 'pix';
     checkoutContext.paymentId = payment.id;
 
@@ -535,16 +537,16 @@ async function processPixPayment() {
       showLoadingAnimation(false);
       
       // Extract PIX QR Code from payment response
-      const pixQrCode = payment.point_of_interaction?.qr_code?.in_store_order_id || 
-                        payment.point_of_interaction?.qr_code?.string ||
-                        payment.qr_code ||
-                        null;
+      const pixQrCode = payment.qr_code || 
+                        payment.point_of_interaction?.transaction_data?.qr_code ||\n                        null;
+
+      console.log('[processPixPayment] QR Code extraído:', pixQrCode);
       
       if (pixQrCode) {
         // Generate the real QR Code with the PIX string
         generatePixCode(pixQrCode);
       } else {
-        console.warn('QR Code not found in payment response:', payment);
+        console.warn('[processPixPayment] QR Code não encontrado. Resposta:', payment);
         document.getElementById('pix-qr-code').innerHTML = '⚠️ Erro ao gerar QR Code. Use a chave abaixo.';
       }
       
