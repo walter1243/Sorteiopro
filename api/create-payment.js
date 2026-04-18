@@ -7,11 +7,7 @@ import {
 } from './_lib/neon.js';
 
 function getAccessToken() {
-  const token =
-    process.env.MERCADO_PAGO_ACCESS_TOKEN ||
-    process.env.AccessToken ||
-    process.env.MP_ACCESS_TOKEN ||
-    process.env.ACCESS_TOKEN;
+  const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
   if (!token) {
     throw new Error('Missing MERCADO_PAGO_ACCESS_TOKEN environment variable');
   }
