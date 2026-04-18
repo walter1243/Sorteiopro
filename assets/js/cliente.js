@@ -20,6 +20,7 @@ import {
 const ui = {
   raffleCards: document.getElementById('raffle-cards'),
   raffleTitle: document.getElementById('raffle-title'),
+  raffleTitleImage: document.getElementById('raffle-title-image'),
   raffleStatus: document.getElementById('raffle-status'),
   instantPrizeAlert: document.getElementById('instant-prize-alert'),
   raffleImage: document.getElementById('raffle-image'),
@@ -897,6 +898,8 @@ function renderHeader() {
   const product = getProduct();
   if (!state.hasPickedRaffle || !product) {
     ui.raffleTitle.textContent = 'Escolha uma rifa ativa';
+    ui.raffleTitleImage.classList.add('hidden');
+    ui.raffleTitleImage.src = '';
     ui.raffleStatus.textContent = '-';
     ui.instantPrizeAlert.classList.add('hidden');
     ui.instantPrizeAlert.textContent = '';
@@ -916,9 +919,13 @@ function renderHeader() {
   ui.rafflePrice.textContent = `Vendas da rifa: ${percent.toFixed(1).replace('.', ',')}%`;
 
   if (product.imageUrl) {
+    ui.raffleTitleImage.src = product.imageUrl;
+    ui.raffleTitleImage.classList.remove('hidden');
     ui.raffleImage.src = product.imageUrl;
     ui.raffleImage.classList.remove('hidden');
   } else {
+    ui.raffleTitleImage.classList.add('hidden');
+    ui.raffleTitleImage.src = '';
     ui.raffleImage.classList.add('hidden');
     ui.raffleImage.src = '';
   }
@@ -1267,18 +1274,18 @@ async function init() {
   startLiveFeed();
   ui.checkoutForm.addEventListener('submit', processCheckout);
 
-  // TEMPORARY DEBUG: Desabilitar Firebase, usar usuário fake
-  // state.user = await ensureAuth();
-  state.user = { uid: 'admin_teste' };
-  
-  // Use DEFAULT_RAFFLES enquanto o Neon API não está pronto
-  state.raffles = DEFAULT_RAFFLES;
-  state.selectedRaffleId = DEFAULT_RAFFLES.find((item) => item.status === 'active')?.id || DEFAULT_RAFFLES[0].id;
-  handleActiveRaffleFlow();
-  render();
-  
-  console.log('[init] App iniciado em modo DEBUG (sem Firebase)');
-  showToast('Modo DEBUG: Firebase desabilitado. Use as rifas padrão para testar.');
+  try {
+    state.user = await ensureAuth();
+    subscribeCatalog();
+    subscribeMyTickets();
+  } catch (error) {
+    console.error(error);
+    state.user = { uid: 'cliente_local' };
+    subscribeCatalog();
+    handleActiveRaffleFlow();
+    render();
+    showToast('Modo local ativo. Exibindo catalogo salvo neste navegador.');
+  }
 }
 
 init();

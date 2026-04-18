@@ -526,3 +526,175 @@ td {
     min-width: 62px;
   }
 }
+
+@media (max-width: 760px) {
+  .admin-page .topbar {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .admin-page .brand {
+    width: 100%;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .admin-page .brand strong,
+  .admin-page .brand small {
+    white-space: normal;
+  }
+
+  .admin-page .brand strong {
+    font-size: 1.05rem;
+  }
+
+  .admin-page .brand small {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+  }
+
+  .admin-header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .admin-menu-modal {
+    width: 100vw;
+    max-width: 100vw;
+  }
+
+  .admin-page .page {
+    width: min(100vw, 100%);
+    padding: 0 10px 20px;
+    margin-top: 10px;
+  }
+
+  .panel {
+    border-radius: 16px;
+    padding: 14px;
+  }
+
+  .panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pass-row {
+    grid-template-columns: 1fr;
+  }
+
+  .table-wrap {
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  .table-wrap table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .table-wrap thead {
+    display: none;
+  }
+
+  .table-wrap tbody,
+  .table-wrap tr,
+  .table-wrap td {
+    display: block;
+    width: 100%;
+  }
+
+  .table-wrap tr {
+    border: 1px solid #2e3f5c;
+    border-radius: 12px;
+    background: #0f1829;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+  }
+
+  .table-wrap td {
+    border: 0;
+    white-space: normal;
+    padding: 6px 0;
+    color: #d9e7ff;
+  }
+
+  .table-wrap td::before {
+    display: block;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8ea3c8;
+    margin-bottom: 2px;
+    content: '';
+  }
+
+  .table-wrap td[colspan]::before {
+    content: none;
+  }
+
+  #buyers-body td:nth-child(1)::before {
+    content: 'Numero';
+  }
+
+  #buyers-body td:nth-child(2)::before {
+    content: 'Nome';
+  }
+
+  #buyers-body td:nth-child(3)::before {
+    content: 'E-mail';
+  }
+
+  #buyers-body td:nth-child(4)::before {
+    content: 'Status';
+  }
+
+  #sales-history-body td:nth-child(1)::before {
+    content: 'Rifa';
+  }
+
+  #sales-history-body td:nth-child(2)::before {
+    content: 'Numero';
+  }
+
+  #sales-history-body td:nth-child(3)::before {
+    content: 'Nome';
+  }
+
+  #sales-history-body td:nth-child(4)::before {
+    content: 'E-mail';
+  }
+
+  #sales-history-body td:nth-child(5)::before {
+    content: 'Status';
+  }
+
+  #prized-numbers-body td:nth-child(1)::before {
+    content: 'Numero';
+  }
+
+  #prized-numbers-body td:nth-child(2)::before {
+    content: 'Valor premio';
+  }
+
+  #prized-numbers-body td:nth-child(3)::before {
+    content: 'Acao';
+  }
+
+  .prized-remove-btn,
+  #draw-btn,
+  #create-raffle-btn,
+  #raffle-form button[type='submit'] {
+    width: 100%;
+  }
+
+  .quota-overview-grid {
+    max-height: 220px;
+  }
+
+  .winner {
+    font-size: 0.84rem;
+  }
+}

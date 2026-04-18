@@ -56,6 +56,7 @@ a {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
 .brand-mark {
@@ -67,6 +68,14 @@ a {
   background: linear-gradient(135deg, #1e88ff, #20d4a6);
   color: #fff;
   font-weight: 800;
+}
+
+.brand-logo {
+  display: block;
+  width: auto;
+  height: clamp(36px, 7vw, 56px);
+  max-width: min(72vw, 320px);
+  object-fit: contain;
 }
 
 .brand strong {
@@ -102,6 +111,17 @@ a {
 .page {
   width: min(1200px, 95vw);
   margin: 24px auto 60px;
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    padding: 12px 16px;
+  }
+
+  .brand-logo {
+    height: clamp(32px, 9vw, 44px);
+    max-width: min(62vw, 240px);
+  }
 }
 
 .panel {

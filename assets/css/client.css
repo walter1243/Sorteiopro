@@ -95,6 +95,27 @@
   align-items: center;
 }
 
+.title-media {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.title-media h2 {
+  margin: 0;
+}
+
+.raffle-title-image {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1px solid #2f3d56;
+  background: #0b1220;
+  flex-shrink: 0;
+}
+
 .title-actions {
   display: flex;
   align-items: center;
@@ -414,6 +435,17 @@ button:disabled {
   .title-row {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .title-media {
+    width: 100%;
+    gap: 10px;
+  }
+
+  .raffle-title-image {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
   }
 
   .title-actions {
