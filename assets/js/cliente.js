@@ -389,10 +389,27 @@ function generatePixCode(pixQrCodeString, pixQrCodeBase64) {
   
   if (pixQrCodeBase64) {
     // Use base64 image from Mercado Pago directly (most reliable)
+    const cleanBase64 = String(pixQrCodeBase64).replace(/\s+/g, '');
     const img = document.createElement('img');
-    img.src = 'data:image/png;base64,' + pixQrCodeBase64;
+    img.src = cleanBase64.startsWith('data:image/') ? cleanBase64 : `data:image/png;base64,${cleanBase64}`;
     img.alt = 'QR Code PIX';
     img.style.cssText = 'width:180px;height:180px;display:block;';
+    img.onerror = () => {
+      // If base64 image fails, fallback to QR string generation
+      if (pixQrCodeString && typeof QRCode !== 'undefined') {
+        pixQR.innerHTML = '';
+        new QRCode(pixQR, {
+          text: pixQrCodeString,
+          width: 180,
+          height: 180,
+          colorDark: '#000000',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.L
+        });
+        return;
+      }
+      pixQR.innerHTML = '❌ Falha ao carregar imagem do QR';
+    };
     pixQR.appendChild(img);
   } else if (pixQrCodeString) {
     // Fallback: generate QR code using qrcode.js library
@@ -419,10 +436,19 @@ function generatePixCode(pixQrCodeString, pixQrCodeBase64) {
   pixKeyTextarea.value = pixQrCodeString || '';
   
   // Add copy button listener
-  document.getElementById('copy-pix-key-btn').addEventListener('click', () => {
-    pixKeyTextarea.select();
-    document.execCommand('copy');
-    showToast('Chave PIX copiada!');
+  document.getElementById('copy-pix-key-btn').addEventListener('click', async () => {
+    try {
+      if (navigator.clipboard && pixKeyTextarea.value) {
+        await navigator.clipboard.writeText(pixKeyTextarea.value);
+      } else {
+        pixKeyTextarea.select();
+        document.execCommand('copy');
+      }
+      showToast('Chave PIX copiada!');
+    } catch (copyError) {
+      console.warn('[generatePixCode] Falha ao copiar chave PIX:', copyError);
+      showToast('Nao foi possivel copiar automaticamente.');
+    }
   }, { once: true });
 }
 
@@ -430,7 +456,8 @@ function extractPixData(payment) {
   const transactionData = payment?.point_of_interaction?.transaction_data;
   return {
     qrCode: transactionData?.qr_code || payment?.qr_code || null,
-    qrCodeBase64: transactionData?.qr_code_base64 || payment?.qr_code_base64 || null
+    qrCodeBase64: transactionData?.qr_code_base64 || payment?.qr_code_base64 || null,
+    ticketUrl: transactionData?.ticket_url || payment?.ticket_url || null
   };
 }
 
@@ -574,7 +601,7 @@ async function processPixPayment() {
       showLoadingAnimation(false);
       
       // Extract PIX QR code from create-payment response
-      let { qrCode: pixQrCode, qrCodeBase64: pixQrCodeBase64 } = extractPixData(payment);
+      let { qrCode: pixQrCode, qrCodeBase64: pixQrCodeBase64, ticketUrl } = extractPixData(payment);
 
       // Fallback: sometimes MP returns pending first and fills QR moments later
       if (!pixQrCode && !pixQrCodeBase64) {
@@ -585,6 +612,7 @@ async function processPixPayment() {
             const extracted = extractPixData(statusData);
             pixQrCode = extracted.qrCode;
             pixQrCodeBase64 = extracted.qrCodeBase64;
+            ticketUrl = extracted.ticketUrl || ticketUrl;
             if (pixQrCode || pixQrCodeBase64) {
               console.log(`[processPixPayment] QR encontrado no payment-status (tentativa ${attempt}).`);
               break;
@@ -604,7 +632,11 @@ async function processPixPayment() {
       } else {
         console.warn('[processPixPayment] QR Code não encontrado!');
         console.warn('[processPixPayment] Resposta completa:', JSON.stringify(payment, null, 2));
-        document.getElementById('pix-qr-code').innerHTML = '⚠️ Erro ao gerar QR Code. Use a chave abaixo.';
+        if (ticketUrl) {
+          document.getElementById('pix-qr-code').innerHTML = `<a href="${ticketUrl}" target="_blank" rel="noopener noreferrer">Abrir boleto/QR do Mercado Pago</a>`;
+        } else {
+          document.getElementById('pix-qr-code').innerHTML = '⚠️ Erro ao gerar QR Code. Use a chave abaixo.';
+        }
       }
       
       // Show step 2 with generated QR code
