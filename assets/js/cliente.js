@@ -434,6 +434,11 @@ function extractPixData(payment) {
   };
 }
 
+function isFirebaseUnavailableError(error) {
+  const message = String(error?.message || error || '').toLowerCase();
+  return message.includes('auth/invalid-api-key') || message.includes('firebase');
+}
+
 async function processCardPayment(cardHolder, cardNumber, expiry, cvv) {
   const checkoutContext = state.checkoutContext;
   if (!checkoutContext) {
@@ -657,32 +662,42 @@ async function saveApprovedTickets(checkoutContext) {
     return;
   }
 
-  for (const num of checkoutContext.selectedNumbers) {
-    const ticketRef = doc(db, 'artifacts', appId, 'public', 'data', `tickets_${checkoutContext.product.id}`, num);
-    const check = await getDoc(ticketRef);
-    if (check.exists()) {
-      throw new Error(`A cota ${num} ja foi comprada por outra pessoa.`);
+  try {
+    for (const num of checkoutContext.selectedNumbers) {
+      const ticketRef = doc(db, 'artifacts', appId, 'public', 'data', `tickets_${checkoutContext.product.id}`, num);
+      const check = await getDoc(ticketRef);
+      if (check.exists()) {
+        throw new Error(`A cota ${num} ja foi comprada por outra pessoa.`);
+      }
     }
-  }
 
-  for (const num of checkoutContext.selectedNumbers) {
-    const payload = {
-      number: num,
-      buyerName: checkoutContext.buyer.name,
-      buyerEmail: checkoutContext.buyer.email,
-      buyerCpf: checkoutContext.buyer.cpf,
-      status: 'approved',
-      raffleId: checkoutContext.product.id,
-      raffleTitle: checkoutContext.product.prizeName || checkoutContext.product.title,
-      paymentMethod: checkoutContext.paymentMethod || '-',
-      paymentId: checkoutContext.paymentId || '-',
-      date: new Date().toISOString(),
-      uid: state.user.uid,
-      lgpdConsent: true
-    };
+    for (const num of checkoutContext.selectedNumbers) {
+      const payload = {
+        number: num,
+        buyerName: checkoutContext.buyer.name,
+        buyerEmail: checkoutContext.buyer.email,
+        buyerCpf: checkoutContext.buyer.cpf,
+        status: 'approved',
+        raffleId: checkoutContext.product.id,
+        raffleTitle: checkoutContext.product.prizeName || checkoutContext.product.title,
+        paymentMethod: checkoutContext.paymentMethod || '-',
+        paymentId: checkoutContext.paymentId || '-',
+        date: new Date().toISOString(),
+        uid: state.user.uid,
+        lgpdConsent: true
+      };
 
-    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `tickets_${checkoutContext.product.id}`, num), payload);
-    await setDoc(doc(db, 'artifacts', appId, 'users', state.user.uid, 'purchases', `${checkoutContext.product.id}_${num}`), payload);
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `tickets_${checkoutContext.product.id}`, num), payload);
+      await setDoc(doc(db, 'artifacts', appId, 'users', state.user.uid, 'purchases', `${checkoutContext.product.id}_${num}`), payload);
+    }
+  } catch (error) {
+    if (isFirebaseUnavailableError(error)) {
+      console.warn('[saveApprovedTickets] Firebase indisponivel, pulando persistencia local:', error);
+      showToast('Pagamento aprovado, mas Firebase indisponivel no momento.');
+      checkoutContext.ticketsReleased = true;
+      return;
+    }
+    throw error;
   }
 
   checkoutContext.ticketsReleased = true;
@@ -1062,11 +1077,20 @@ async function processCheckout(event) {
   try {
     for (const num of state.selectedNumbers) {
       const ticketRef = doc(db, 'artifacts', appId, 'public', 'data', `tickets_${product.id}`, num);
-      const check = await getDoc(ticketRef);
-      if (check.exists()) {
-        showToast(`A cota ${num} ja foi comprada.`);
-        ui.buyBtn.disabled = false;
-        return;
+      try {
+        const check = await getDoc(ticketRef);
+        if (check.exists()) {
+          showToast(`A cota ${num} ja foi comprada.`);
+          ui.buyBtn.disabled = false;
+          return;
+        }
+      } catch (error) {
+        if (isFirebaseUnavailableError(error)) {
+          console.warn('[processCheckout] Firebase indisponivel, seguindo sem checagem de disponibilidade:', error);
+          showToast('Firebase indisponivel. Continuando em modo de teste.');
+          break;
+        }
+        throw error;
       }
     }
 
