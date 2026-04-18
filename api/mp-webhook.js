@@ -6,7 +6,7 @@ function getAccessToken() {
   if (!token) {
     throw new Error('Missing MERCADO_PAGO_ACCESS_TOKEN environment variable');
   }
-  return String(token).trim();
+  return String(token).trim().replace(/^['\"]|['\"]$/g, '');
 }
 
 export default async function handler(req, res) {

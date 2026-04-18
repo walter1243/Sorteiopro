@@ -11,7 +11,7 @@ function getAccessToken() {
   if (!token) {
     throw new Error('Missing MERCADO_PAGO_ACCESS_TOKEN environment variable');
   }
-  return String(token).trim();
+  return String(token).trim().replace(/^['\"]|['\"]$/g, '');
 }
 
 function sanitizeExternalReference(value) {
@@ -140,7 +140,8 @@ export default async function handler(req, res) {
         console.error('[create-payment] MP Auth Error (401/403):', {
           status: response.status,
           externalReference,
-          tokenProvided: !!token
+          tokenProvided: !!token,
+          tokenLength: token.length
         });
       }
 

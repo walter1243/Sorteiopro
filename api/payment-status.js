@@ -6,7 +6,7 @@ function getAccessToken() {
   if (!token) {
     throw new Error('Missing MERCADO_PAGO_ACCESS_TOKEN environment variable');
   }
-  return String(token).trim();
+  return String(token).trim().replace(/^['\"]|['\"]$/g, '');
 }
 
 export default async function handler(req, res) {
@@ -35,7 +35,8 @@ export default async function handler(req, res) {
         console.error('[payment-status] MP Auth Error (401/403):', {
           status: response.status,
           paymentId,
-          token: token ? 'PROVIDED' : 'MISSING'
+          token: token ? 'PROVIDED' : 'MISSING',
+          tokenLength: token.length
         });
         return res.status(401).json({
           error: 'Unauthorized with Mercado Pago',
