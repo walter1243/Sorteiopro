@@ -1075,25 +1075,6 @@ async function processCheckout(event) {
   ui.buyBtn.disabled = true;
 
   try {
-    for (const num of state.selectedNumbers) {
-      const ticketRef = doc(db, 'artifacts', appId, 'public', 'data', `tickets_${product.id}`, num);
-      try {
-        const check = await getDoc(ticketRef);
-        if (check.exists()) {
-          showToast(`A cota ${num} ja foi comprada.`);
-          ui.buyBtn.disabled = false;
-          return;
-        }
-      } catch (error) {
-        if (isFirebaseUnavailableError(error)) {
-          console.warn('[processCheckout] Firebase indisponivel, seguindo sem checagem de disponibilidade:', error);
-          showToast('Firebase indisponivel. Continuando em modo de teste.');
-          break;
-        }
-        throw error;
-      }
-    }
-
     const checkoutContext = {
       product,
       selectedNumbers: [...state.selectedNumbers],
