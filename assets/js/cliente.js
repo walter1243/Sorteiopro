@@ -380,31 +380,43 @@ function selectPaymentMethod(method) {
   // For PIX, we'll generate the QR code after the user confirms payment
 }
 
-function generatePixCode(pixQrCodeString) {
+function generatePixCode(pixQrCodeString, pixQrCodeBase64) {
   const pixQR = document.getElementById('pix-qr-code');
   const pixKeyTextarea = document.getElementById('pix-key');
   
   // Clear previous QR codes
   pixQR.innerHTML = '';
   
-  // Generate QR code using qrcode.js library
-  try {
-    new QRCode(pixQR, {
-      text: pixQrCodeString,
-      width: 180,
-      height: 180,
-      colorDark: '#000000',
-      colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.H
-    });
-  } catch (error) {
-    console.error('Erro ao gerar QR Code:', error);
-    pixQR.innerHTML = '❌ Erro ao gerar QR Code';
+  if (pixQrCodeBase64) {
+    // Use base64 image from Mercado Pago directly (most reliable)
+    const img = document.createElement('img');
+    img.src = 'data:image/png;base64,' + pixQrCodeBase64;
+    img.alt = 'QR Code PIX';
+    img.style.cssText = 'width:180px;height:180px;display:block;';
+    pixQR.appendChild(img);
+  } else if (pixQrCodeString) {
+    // Fallback: generate QR code using qrcode.js library
+    try {
+      new QRCode(pixQR, {
+        text: pixQrCodeString,
+        width: 180,
+        height: 180,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.L
+      });
+    } catch (error) {
+      console.error('Erro ao gerar QR Code:', error);
+      pixQR.innerHTML = '❌ Erro ao gerar QR Code';
+      return;
+    }
+  } else {
+    pixQR.innerHTML = '❌ QR Code não disponível';
     return;
   }
   
   // Set the PIX key
-  pixKeyTextarea.value = pixQrCodeString;
+  pixKeyTextarea.value = pixQrCodeString || '';
   
   // Add copy button listener
   document.getElementById('copy-pix-key-btn').addEventListener('click', () => {
@@ -540,12 +552,15 @@ async function processPixPayment() {
       const pixQrCode = payment.qr_code || 
             payment.point_of_interaction?.transaction_data?.qr_code ||
             null;
+      const pixQrCodeBase64 = payment.qr_code_base64 ||
+            payment.point_of_interaction?.transaction_data?.qr_code_base64 ||
+            null;
 
-      console.log('[processPixPayment] QR Code extraído:', pixQrCode);
+      console.log('[processPixPayment] QR Code extraído:', pixQrCode ? pixQrCode.substring(0, 30) + '...' : null);
+      console.log('[processPixPayment] Base64 disponível:', !!pixQrCodeBase64);
       
-      if (pixQrCode) {
-        // Generate the real QR Code with the PIX string
-        generatePixCode(pixQrCode);
+      if (pixQrCode || pixQrCodeBase64) {
+        generatePixCode(pixQrCode, pixQrCodeBase64);
       } else {
         console.warn('[processPixPayment] QR Code não encontrado. Resposta:', payment);
         document.getElementById('pix-qr-code').innerHTML = '⚠️ Erro ao gerar QR Code. Use a chave abaixo.';
