@@ -71,11 +71,14 @@ a {
 }
 
 .brand-logo {
-  display: block;
+  display: inline-block;
+  height: clamp(30px, 6vw, 50px);
   width: auto;
-  height: clamp(36px, 7vw, 56px);
-  max-width: min(72vw, 320px);
+  min-width: 150px;
+  max-width: 250px;
   object-fit: contain;
+  background: transparent;
+  vertical-align: middle;
 }
 
 .brand strong {
@@ -119,8 +122,9 @@ a {
   }
 
   .brand-logo {
-    height: clamp(32px, 9vw, 44px);
-    max-width: min(62vw, 240px);
+    height: clamp(30px, 8vw, 50px);
+    min-width: 150px;
+    max-width: 220px;
   }
 }
 
