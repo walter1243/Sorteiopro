@@ -58,7 +58,9 @@ const ui = {
   cookieModal: document.getElementById('cookie-lgpd-modal'),
   cookieCheck: document.getElementById('cookie-consent-check'),
   cookieBtn: document.getElementById('cookie-consent-btn'),
-  whatsappFloatBtn: document.getElementById('whatsapp-float-btn')
+  whatsappFloatBtn: document.getElementById('whatsapp-float-btn'),
+  mascoteToggle: document.getElementById('mascote-toggle'),
+  mascotePote: document.getElementById('mascote-pote')
 };
 
 const state = {
@@ -1299,6 +1301,16 @@ async function init() {
       if (e.target === overlay) { overlay.classList.add('hidden'); }
     });
   });
+
+  if (ui.mascoteToggle && ui.mascotePote) {
+    ui.mascoteToggle.addEventListener('click', () => {
+      const willShow = !ui.mascotePote.classList.contains('show');
+      ui.mascotePote.classList.toggle('show', willShow);
+      ui.mascoteToggle.setAttribute('aria-expanded', String(willShow));
+      ui.mascotePote.setAttribute('aria-hidden', String(!willShow));
+    });
+  }
+
   // WhatsApp float fallback href
   ui.whatsappFloatBtn.href = `https://wa.me/${DEFAULT_PRIZE_WHATSAPP_NUMBER}`;
 

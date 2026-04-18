@@ -794,6 +794,115 @@ button:disabled {
   margin-top: 40px;
 }
 
+.raffle-info-block {
+  position: relative;
+  max-width: 420px;
+  margin: 0 auto 16px;
+  padding: 14px 12px;
+  border: 1px solid #21324a;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #0e1625, #0b111c);
+}
+
+.raffle-info-title {
+  margin: 0 0 10px;
+  font-size: 0.94rem;
+  color: #d7e7ff;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mascote-wrapper {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+}
+
+.mascote-img {
+  width: 120px;
+  max-width: 42vw;
+  height: auto;
+  filter: drop-shadow(0 8px 14px #0000006e);
+  transition: transform 0.22s ease;
+}
+
+.mascote-wrapper:hover .mascote-img {
+  transform: scale(1.05);
+}
+
+.mascote-wrapper:active .mascote-img {
+  transform: scale(0.96);
+}
+
+.mascote-caption {
+  color: #ffd86a;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mascote-pote {
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  transform: translate(-50%, 20px) scale(0.7);
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.mascote-pote.show {
+  animation: potePop 460ms ease forwards;
+}
+
+.pote-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  font-size: 1.5rem;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, #ffe082, #f8b300);
+  box-shadow: 0 10px 20px #00000055;
+}
+
+.pote-text {
+  background: #18b760;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 6px 10px;
+  box-shadow: 0 6px 18px #0000004f;
+}
+
+@keyframes potePop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 24px) scale(0.5) rotate(-20deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, -28px) scale(1.12) rotate(4deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -22px) scale(1) rotate(0deg);
+  }
+}
+
 .site-footer-inner {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -977,6 +1086,31 @@ button:disabled {
 }
 
 @media (max-width: 760px) {
+  .raffle-info-block {
+    max-width: 100%;
+    padding: 12px 10px;
+  }
+
+  .raffle-info-title {
+    font-size: 0.84rem;
+  }
+
+  .mascote-img {
+    width: 104px;
+    max-width: 38vw;
+  }
+
+  .pote-icon {
+    width: 46px;
+    height: 46px;
+    font-size: 1.3rem;
+  }
+
+  .pote-text {
+    font-size: 0.66rem;
+    padding: 5px 9px;
+  }
+
   .site-footer-inner {
     max-width: 100%;
   }
