@@ -503,6 +503,17 @@ async function processPixPayment() {
     throw new Error('Checkout sem contexto.');
   }
 
+  // Validate CPF format
+  const cpfDigits = checkoutContext.buyer.cpf.replace(/\D/g, '');
+  if (cpfDigits.length !== 11) {
+    throw new Error('CPF inválido. Deve ter 11 dígitos.');
+  }
+  // Check for obvious invalid patterns
+  const allSame = /^(\d)\1{10}$/.test(cpfDigits);
+  if (allSame) {
+    throw new Error('CPF inválido. Todos os dígitos são iguais.');
+  }
+
   const pixPayload = {
     transaction_amount: Number(checkoutContext.totalAmount.toFixed(2)),
     description: `Rifa - ${checkoutContext.product.prizeName || checkoutContext.product.title}`,
@@ -513,7 +524,7 @@ async function processPixPayment() {
       last_name: checkoutContext.buyer.name.split(' ').slice(1).join(' ') || '-',
       identification: {
         type: 'CPF',
-        number: checkoutContext.buyer.cpf.replace(/\D/g, '')
+        number: cpfDigits
       }
     },
     external_reference: `${checkoutContext.product.id}|${checkoutContext.selectedNumbers.join(',')}`,
@@ -541,6 +552,7 @@ async function processPixPayment() {
     }
 
     console.log('[processPixPayment] Resposta completa:', payment);
+    console.log('[processPixPayment] point_of_interaction:', payment.point_of_interaction);
 
     checkoutContext.paymentMethod = 'pix';
     checkoutContext.paymentId = payment.id;
@@ -548,21 +560,19 @@ async function processPixPayment() {
     if (payment.status === 'pending' && payment.payment_method_id === 'pix') {
       showLoadingAnimation(false);
       
-      // Extract PIX QR Code from payment response
-      const pixQrCode = payment.qr_code || 
-            payment.point_of_interaction?.transaction_data?.qr_code ||
-            null;
-      const pixQrCodeBase64 = payment.qr_code_base64 ||
-            payment.point_of_interaction?.transaction_data?.qr_code_base64 ||
-            null;
+      // Extract PIX QR Code - busca direto de transaction_data
+      const transactionData = payment.point_of_interaction?.transaction_data;
+      const pixQrCode = transactionData?.qr_code || payment.qr_code || null;
+      const pixQrCodeBase64 = transactionData?.qr_code_base64 || payment.qr_code_base64 || null;
 
-      console.log('[processPixPayment] QR Code extraído:', pixQrCode ? pixQrCode.substring(0, 30) + '...' : null);
-      console.log('[processPixPayment] Base64 disponível:', !!pixQrCodeBase64);
+      console.log('[processPixPayment] QR Code (string):', pixQrCode ? pixQrCode.substring(0, 50) + '...' : 'NÃO ENCONTRADO');
+      console.log('[processPixPayment] QR Code (base64):', pixQrCodeBase64 ? pixQrCodeBase64.substring(0, 30) + '...' : 'NÃO ENCONTRADO');
       
       if (pixQrCode || pixQrCodeBase64) {
         generatePixCode(pixQrCode, pixQrCodeBase64);
       } else {
-        console.warn('[processPixPayment] QR Code não encontrado. Resposta:', payment);
+        console.warn('[processPixPayment] QR Code não encontrado!');
+        console.warn('[processPixPayment] Resposta completa:', JSON.stringify(payment, null, 2));
         document.getElementById('pix-qr-code').innerHTML = '⚠️ Erro ao gerar QR Code. Use a chave abaixo.';
       }
       
