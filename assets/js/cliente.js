@@ -23,7 +23,6 @@ const ui = {
   raffleTitleImage: document.getElementById('raffle-title-image'),
   raffleStatus: document.getElementById('raffle-status'),
   instantPrizeAlert: document.getElementById('instant-prize-alert'),
-  raffleImage: document.getElementById('raffle-image'),
   rafflePrice: document.getElementById('raffle-price'),
   winnerAlert: document.getElementById('winner-alert'),
   tabShop: document.getElementById('tab-shop'),
@@ -908,8 +907,6 @@ function renderHeader() {
     ui.instantPrizeAlert.classList.add('hidden');
     ui.instantPrizeAlert.textContent = '';
     ui.rafflePrice.textContent = 'Selecione uma rifa na vitrine acima para visualizar as cotas.';
-    ui.raffleImage.classList.add('hidden');
-    ui.raffleImage.src = '';
     ui.winnerAlert.textContent = '';
     ui.winnerAlert.classList.add('hidden');
     return;
@@ -925,13 +922,9 @@ function renderHeader() {
   if (product.imageUrl) {
     ui.raffleTitleImage.src = product.imageUrl;
     ui.raffleTitleImage.classList.remove('hidden');
-    ui.raffleImage.src = product.imageUrl;
-    ui.raffleImage.classList.remove('hidden');
   } else {
     ui.raffleTitleImage.classList.add('hidden');
     ui.raffleTitleImage.src = '';
-    ui.raffleImage.classList.add('hidden');
-    ui.raffleImage.src = '';
   }
 
   if (hasVisibleWinner(product.winner)) {

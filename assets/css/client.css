@@ -114,6 +114,7 @@
 .title-media {
   display: flex;
   align-items: center;
+  flex-direction: row-reverse;
   gap: 12px;
   min-width: 0;
 }
