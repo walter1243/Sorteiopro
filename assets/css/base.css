@@ -17,9 +17,11 @@
 
 body {
   margin: 0;
-  background:
-    linear-gradient(160deg, rgba(7,9,14,0.82) 0%, rgba(10,18,34,0.78) 100%),
-    url('/sorteio%20(2).png') center center / cover fixed;
+  background-image: url('/bg-app.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-color: #07090e;
   color: var(--text);
   font-family: 'Manrope', sans-serif;
   min-height: 100vh;
