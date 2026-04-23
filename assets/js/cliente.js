@@ -926,11 +926,11 @@ function startPixStatusPolling(checkoutContext) {
         pixStatusPollTimer = null;
 
         await saveApprovedTickets(checkoutContext);
-        await applyPrizeClaimFlow(checkoutContext);
-
         state.selectedNumbers = [];
+        await closePaymentModal();
         render();
-        showToast('PIX aprovado! Cotas liberadas com sucesso.');
+        await applyPrizeClaimFlow(checkoutContext);
+        showToast('Obrigado! Sua cota foi comprada. Para verificar suas cotas, va em Minhas cotas.');
         return;
       }
 
