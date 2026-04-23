@@ -75,17 +75,25 @@ const ui = {
   drawProgressFill: document.getElementById('draw-progress-fill'),
   drawChangeRaffleBtn: document.getElementById('draw-change-raffle-btn'),
   drawModeBtns: [...document.querySelectorAll('.draw-mode-btn')],
-  drawDisplay: document.getElementById('draw-display'),
+  drawCardDisplay: document.getElementById('draw-card-display'),
   drawScreen: document.getElementById('draw-screen'),
   drawSpinningNumber: document.getElementById('draw-spinning-number'),
-  drawStatusText: document.getElementById('draw-status-text'),
+  drawRangeBadge: document.getElementById('draw-range-badge'),
+  drawStatusDot: document.getElementById('draw-status-dot'),
+  drawStatusLabel: document.getElementById('draw-status-label'),
   drawWinnerPanel: document.getElementById('draw-winner-panel'),
   drawWinnerLabel: document.getElementById('draw-winner-label'),
   drawWinnerNameText: document.getElementById('draw-winner-name-text'),
   drawWinnerNumberText: document.getElementById('draw-winner-number-text'),
   drawWhatsappBtn: document.getElementById('draw-whatsapp-btn'),
   adminQuickDrawBtn: document.getElementById('admin-quick-draw-btn'),
+  drawResetBtn: document.getElementById('draw-reset-btn'),
+  drawHistoryBox: document.getElementById('draw-history-box'),
   drawHistoryList: document.getElementById('draw-history-list'),
+  drawHistoryToggleBtn: document.getElementById('draw-history-toggle-btn'),
+  drawSettingsToggleBtn: document.getElementById('draw-settings-toggle-btn'),
+  drawSettingsBox: document.getElementById('draw-settings-box'),
+  drawClearHistoryBtn: document.getElementById('draw-clear-history-btn'),
   // Draw prize modal
   drawPrizeModal: document.getElementById('draw-prize-modal'),
   drawPrizeCancelBtn: document.getElementById('draw-prize-cancel-btn'),
@@ -781,6 +789,13 @@ async function onDeleteRaffle() {
     return;
   }
 
+  // Bloqueia exclusão se há cotas vendidas (proteção anti-fraude)
+  const soldCount = Object.keys(state.soldTickets).length;
+  if (soldCount > 0) {
+    showToast(`Nao e possivel apagar "${raffle.prizeName || raffle.title}" pois ja possui ${soldCount} cota(s) vendida(s). Apenas rifas sem vendas podem ser apagadas.`);
+    return;
+  }
+
   const confirmed = window.confirm(`Deseja apagar a rifa "${raffle.prizeName || raffle.title}"?`);
   if (!confirmed) {
     return;
@@ -886,6 +901,7 @@ function renderDrawRaffleInfo() {
     ui.drawRafflePct.textContent = 'Progresso: 0%';
     ui.drawProgressFill.style.width = '0%';
     ui.drawRaffleImg.classList.add('hidden');
+    if (ui.drawRangeBadge) ui.drawRangeBadge.textContent = 'Números de: 0 — 0';
     return;
   }
 
@@ -897,13 +913,16 @@ function renderDrawRaffleInfo() {
     ui.drawRaffleImg.src = raffle.imageUrl;
   }
 
-  // Count sold tickets for this raffle
-  const soldCount = Object.entries(state.soldTickets).filter(() => raffle.id === state.selectedRaffleId).length;
+  const totalQuotas = Number(raffle.totalQuotas || 0);
   const usedSold = raffle.id === state.selectedRaffleId ? Object.keys(state.soldTickets).length : 0;
-  const total = Number(raffle.totalQuotas || 0);
-  const pct = total > 0 ? Math.min((usedSold / total) * 100, 100) : 0;
+  const pct = totalQuotas > 0 ? Math.min((usedSold / totalQuotas) * 100, 100) : 0;
   ui.drawRafflePct.textContent = `Progresso: ${pct.toFixed(1).replace('.', ',')}%`;
   ui.drawProgressFill.style.width = `${pct}%`;
+
+  if (ui.drawRangeBadge) {
+    const max = Math.max(totalQuotas - 1, 0);
+    ui.drawRangeBadge.textContent = `Números de: 0 — ${max}`;
+  }
 }
 
 function openDrawPrizeModal() {
@@ -1002,7 +1021,8 @@ async function startQuickDraw(prizeValue) {
   ui.drawWinnerPanel.classList.add('hidden');
   ui.drawScreen.classList.remove('hidden');
   ui.drawSpinningNumber.classList.add('spinning');
-  ui.drawStatusText.textContent = 'Sorteando...';
+  if (ui.drawStatusDot) { ui.drawStatusDot.classList.add('spinning'); }
+  if (ui.drawStatusLabel) { ui.drawStatusLabel.textContent = 'Sorteando...'; }
 
   const totalQuotas = Number(raffle.totalQuotas || 100);
 
@@ -1018,10 +1038,12 @@ async function startQuickDraw(prizeValue) {
     showToast('Nenhum número disponível para sorteio.');
     ui.adminQuickDrawBtn.disabled = false;
     ui.drawSpinningNumber.classList.remove('spinning');
+    if (ui.drawStatusDot) { ui.drawStatusDot.classList.remove('spinning'); }
+    if (ui.drawStatusLabel) { ui.drawStatusLabel.textContent = 'Sistema Online'; }
     return;
   }
 
-  // Animation: cycle through random numbers for ~2.5s
+  // Animation: cycle through random numbers for ~2.5s, decelerating
   const duration = 2500;
   const start = Date.now();
 
@@ -1046,6 +1068,9 @@ async function startQuickDraw(prizeValue) {
   const winnerNumber = pool[finalIdx];
   ui.drawSpinningNumber.classList.remove('spinning');
   ui.drawSpinningNumber.textContent = winnerNumber;
+
+  if (ui.drawStatusDot) { ui.drawStatusDot.classList.remove('spinning'); }
+  if (ui.drawStatusLabel) { ui.drawStatusLabel.textContent = 'Sistema Online'; }
 
   // Get ticket info if this number was purchased
   const ticket = state.soldTickets[winnerNumber];
@@ -1094,7 +1119,6 @@ async function startQuickDraw(prizeValue) {
     }
 
     ui.adminQuickDrawBtn.disabled = false;
-    ui.drawStatusText.textContent = 'Sorteio concluído';
   }, 300);
 }
 
@@ -1120,7 +1144,7 @@ function initDrawSection() {
   // Mode toggle
   ui.drawModeBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
-      state.drawMode = btn.dataset.mode;
+      state.drawMode = btn.dataset.mode || 'random';
       ui.drawModeBtns.forEach((b) => b.classList.toggle('active', b.dataset.mode === state.drawMode));
     });
   });
@@ -1158,6 +1182,43 @@ function initDrawSection() {
   ui.adminQuickDrawBtn.addEventListener('click', onAdminQuickDraw);
 
   renderDrawRaffleInfo();
+
+  // Reset button — clear winner panel, reset display
+  if (ui.drawResetBtn) {
+    ui.drawResetBtn.addEventListener('click', () => {
+      state.drawHistory = [];
+      if (ui.drawScreen) ui.drawScreen.classList.remove('hidden');
+      if (ui.drawWinnerPanel) ui.drawWinnerPanel.classList.add('hidden');
+      if (ui.drawSpinningNumber) ui.drawSpinningNumber.textContent = '000';
+      if (ui.drawStatusDot) ui.drawStatusDot.classList.remove('spinning');
+      if (ui.drawStatusLabel) ui.drawStatusLabel.textContent = 'Sistema Online';
+      renderDrawHistory();
+    });
+  }
+
+  // History toggle
+  if (ui.drawHistoryToggleBtn && ui.drawHistoryBox) {
+    ui.drawHistoryToggleBtn.addEventListener('click', () => {
+      ui.drawHistoryBox.classList.toggle('hidden');
+    });
+  }
+
+  // Settings toggle
+  if (ui.drawSettingsToggleBtn && ui.drawSettingsBox) {
+    ui.drawSettingsToggleBtn.addEventListener('click', () => {
+      ui.drawSettingsBox.classList.toggle('hidden');
+    });
+  }
+
+  // Clear history button
+  if (ui.drawClearHistoryBtn) {
+    ui.drawClearHistoryBtn.addEventListener('click', () => {
+      state.drawHistory = [];
+      renderDrawHistory();
+    });
+  }
+
+  renderDrawHistory();
 }
 
 // ==================== END DRAW SECTION ====================
