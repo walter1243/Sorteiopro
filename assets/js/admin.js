@@ -750,6 +750,12 @@ async function onDeleteRaffle() {
     return;
   }
 
+  const typed = window.prompt('Digite APAGAR para confirmar a exclusao desta rifa.');
+  if (typed !== 'APAGAR') {
+    showToast('Exclusao cancelada. Confirmacao invalida.');
+    return;
+  }
+
   const response = await fetch(`/api/catalog?id=${encodeURIComponent(raffle.id)}`, {
     method: 'DELETE'
   });

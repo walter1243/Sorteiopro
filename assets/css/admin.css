@@ -232,6 +232,23 @@ button.ghost {
   border-color: #ffffff33;
 }
 
+#create-raffle-btn,
+#delete-raffle-btn {
+  width: 100%;
+  margin-top: 8px;
+}
+
+#delete-raffle-btn {
+  background: #3a1620;
+  border-color: #8e2c45;
+  color: #ffd8e0;
+}
+
+#delete-raffle-btn:hover {
+  background: #52202d;
+  border-color: #b53e5d;
+}
+
 button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -685,6 +702,7 @@ td {
 
   .prized-remove-btn,
   #draw-btn,
+  #delete-raffle-btn,
   #create-raffle-btn,
   #raffle-form button[type='submit'] {
     width: 100%;
