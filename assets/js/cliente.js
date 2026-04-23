@@ -93,7 +93,10 @@ const state = {
     raffleId: null
   },
   activeTab: 'shop',
-  hasPickedRaffle: false
+  hasPickedRaffle: false,
+  quotaVisibleCount: 100,
+  quotaScrollUnlocked: false,
+  quotaLastRaffleId: null
 };
 
 let unsubTickets = null;
@@ -105,6 +108,9 @@ let pixStatusPollTimer = null;
 let isPixGenerationInFlight = false;
 const WINNER_DISPLAY_MS = 3 * 24 * 60 * 60 * 1000;
 const DEFAULT_PRIZE_WHATSAPP_NUMBER = '5563991133386';
+const INITIAL_VISIBLE_QUOTAS = 100;
+const QUOTA_LOAD_BATCH = 100;
+const QUOTA_SCROLL_THRESHOLD_PX = 220;
 
 const fakeNames = [
   'Carlos',
@@ -149,6 +155,57 @@ function getPreferredActiveRaffle() {
 function getPrizeMap(product) {
   const entries = Array.isArray(product?.prizeNumbers) ? product.prizeNumbers : [];
   return new Map(entries.map((item) => [String(item.number || '').padStart(3, '0').slice(-3), Number(item.value || 0)]));
+}
+
+function ensureQuotaViewportState(product) {
+  if (!product) {
+    state.quotaLastRaffleId = null;
+    state.quotaVisibleCount = INITIAL_VISIBLE_QUOTAS;
+    state.quotaScrollUnlocked = false;
+    return;
+  }
+
+  if (state.quotaLastRaffleId !== product.id) {
+    state.quotaLastRaffleId = product.id;
+    state.quotaVisibleCount = Math.min(INITIAL_VISIBLE_QUOTAS, Number(product.totalQuotas || 0));
+    state.quotaScrollUnlocked = false;
+  }
+}
+
+function tryLoadMoreQuotasByScroll() {
+  const product = getProduct();
+  if (!state.hasPickedRaffle || !product || state.activeTab !== 'shop') {
+    return;
+  }
+
+  const totalQuotas = Number(product.totalQuotas || 0);
+  if (state.quotaVisibleCount >= totalQuotas) {
+    return;
+  }
+
+  if (!state.quotaScrollUnlocked) {
+    state.quotaScrollUnlocked = true;
+  }
+
+  const gridRect = ui.quotaGrid.getBoundingClientRect();
+  const reachedLoadZone = gridRect.bottom <= window.innerHeight + QUOTA_SCROLL_THRESHOLD_PX;
+  if (!reachedLoadZone) {
+    return;
+  }
+
+  const nextCount = Math.min(state.quotaVisibleCount + QUOTA_LOAD_BATCH, totalQuotas);
+  if (nextCount !== state.quotaVisibleCount) {
+    state.quotaVisibleCount = nextCount;
+    renderQuotaGrid();
+  }
+}
+
+function onQuotaWindowScroll() {
+  if (!state.hasPickedRaffle) {
+    return;
+  }
+
+  tryLoadMoreQuotasByScroll();
 }
 
 function getSelectedPrizeHits(product) {
@@ -367,6 +424,7 @@ function confirmRaffleSelectionFromModal() {
   state.selectedRaffleId = raffle.id;
   state.selectedNumbers = [];
   state.hasPickedRaffle = true;
+  state.quotaLastRaffleId = null;
   closeRaffleSelectionModal();
   subscribeTickets();
   render();
@@ -886,13 +944,18 @@ function renderQuotaGrid() {
     return;
   }
 
+  ensureQuotaViewportState(product);
+
   const quickWinners = new Set(
     (Array.isArray(product.quickDrawWinners) ? product.quickDrawWinners : []).map((w) => w.number)
   );
 
+  const totalQuotas = Number(product.totalQuotas || 0);
+  const visibleLimit = Math.min(state.quotaVisibleCount, totalQuotas);
+
   ui.quotaGrid.innerHTML = '';
 
-  for (let i = 0; i < Number(product.totalQuotas); i += 1) {
+  for (let i = 0; i < visibleLimit; i += 1) {
     const number = normalizeQuotaNumber(i);
     const sold = !!state.soldTickets[number];
     const selected = state.selectedNumbers.includes(number);
@@ -918,6 +981,15 @@ function renderQuotaGrid() {
     });
 
     ui.quotaGrid.appendChild(button);
+  }
+
+  if (visibleLimit < totalQuotas) {
+    const hint = document.createElement('p');
+    hint.className = 'muted';
+    hint.style.gridColumn = '1 / -1';
+    hint.style.textAlign = 'center';
+    hint.textContent = `Exibindo ${visibleLimit} de ${totalQuotas} cotas. Role para carregar mais.`;
+    ui.quotaGrid.appendChild(hint);
   }
 }
 
@@ -1119,6 +1191,7 @@ function handleActiveRaffleFlow() {
 
   state.selectedRaffleId = preferred.id;
   state.hasPickedRaffle = true;
+  state.quotaLastRaffleId = null;
 }
 
 function addLiveFeedMessage() {
@@ -1315,6 +1388,7 @@ async function init() {
     ui.myTicketsDocument.focus();
   });
   ui.myTicketsLookupForm.addEventListener('submit', onLookupMyTickets);
+  window.addEventListener('scroll', onQuotaWindowScroll, { passive: true });
 
   ui.raffleModalCloseBtn.addEventListener('click', closeRaffleSelectionModal);
   ui.raffleModalConfirmBtn.addEventListener('click', confirmRaffleSelectionFromModal);
