@@ -393,6 +393,41 @@ export async function listTicketsByDocument(documentDigits) {
   return rows || [];
 }
 
+export async function listApprovedTicketsByRaffle(raffleId) {
+  const sql = requireSqlClient();
+  await ensureBusinessSchema();
+
+  const id = String(raffleId || '').trim();
+  if (!id) {
+    return [];
+  }
+
+  const rows = await sql`
+    SELECT
+      p.external_reference,
+      p.raffle_id,
+      p.selected_numbers_csv,
+      p.buyer_name,
+      p.buyer_email,
+      p.buyer_cpf,
+      p.buyer_phone,
+      p.payment_method_id,
+      p.payment_id,
+      p.status,
+      p.mp_status,
+      p.created_at,
+      r.title AS raffle_title
+    FROM pedidos p
+    LEFT JOIN rifas r ON r.id = p.raffle_id
+    WHERE p.raffle_id = ${id}
+      AND COALESCE(NULLIF(LOWER(p.mp_status), ''), LOWER(p.status), '') = 'approved'
+    ORDER BY p.created_at DESC
+    LIMIT 5000
+  `;
+
+  return rows || [];
+}
+
 export async function updatePedidoByExternalReference(externalReference, updates) {
   const sql = requireSqlClient();
   await ensureBusinessSchema();

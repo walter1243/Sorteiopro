@@ -102,6 +102,7 @@ const state = {
 let unsubTickets = null;
 let liveFeedTimer = null;
 let catalogRefreshTimer = null;
+let soldTicketsRefreshTimer = null;
 let mpClient = null;
 let paymentBrickController = null;
 let pixStatusPollTimer = null;
@@ -1307,24 +1308,44 @@ function subscribeCatalog() {
   catalogRefreshTimer = setInterval(refreshCatalog, 15000);
 }
 
+async function fetchSoldTicketsForSelectedRaffle() {
+  const product = getProduct();
+  if (!product?.id) {
+    state.soldTickets = {};
+    render();
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/raffle-tickets?raffleId=${encodeURIComponent(product.id)}`, {
+      cache: 'no-store'
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.error || 'Falha ao carregar cotas compradas.');
+    }
+
+    state.soldTickets = data?.tickets && typeof data.tickets === 'object' ? data.tickets : {};
+    render();
+  } catch (error) {
+    console.error('[fetchSoldTicketsForSelectedRaffle] Error:', error);
+  }
+}
+
 function subscribeTickets() {
   if (unsubTickets) {
     unsubTickets();
+    unsubTickets = null;
+  }
+  if (soldTicketsRefreshTimer) {
+    clearInterval(soldTicketsRefreshTimer);
+    soldTicketsRefreshTimer = null;
   }
 
-  const product = getProduct();
   state.soldTickets = {};
   render();
-  const ticketsRef = collection(db, 'artifacts', appId, 'public', 'data', `tickets_${product.id}`);
-
-  unsubTickets = onSnapshot(ticketsRef, (snap) => {
-    const sold = {};
-    snap.forEach((d) => {
-      sold[d.id] = d.data();
-    });
-    state.soldTickets = sold;
-    render();
-  });
+  fetchSoldTicketsForSelectedRaffle();
+  soldTicketsRefreshTimer = setInterval(fetchSoldTicketsForSelectedRaffle, 10000);
 }
 
 function subscribeMyTickets() {

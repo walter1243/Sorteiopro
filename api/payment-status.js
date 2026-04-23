@@ -1,5 +1,5 @@
 const MP_API_BASE = 'https://api.mercadopago.com';
-import { insertPaymentEvent } from './_lib/neon.js';
+import { insertPaymentEvent, updatePedidoByExternalReference } from './_lib/neon.js';
 
 function getAccessToken() {
   const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
@@ -87,6 +87,21 @@ export default async function handler(req, res) {
       amount: Number(data.transaction_amount || 0),
       rawPayload: data
     });
+
+    if (data.external_reference) {
+      await updatePedidoByExternalReference(String(data.external_reference), {
+        paymentId: String(data.id || paymentId),
+        paymentMethodId: String(data.payment_method_id || ''),
+        status: String(data.status || ''),
+        statusDetail: String(data.status_detail || ''),
+        mpStatus: String(data.status || ''),
+        mpStatusDetail: String(data.status_detail || ''),
+        rawPayload: {
+          source: 'payment-status',
+          response: data
+        }
+      });
+    }
 
     return res.status(200).json({
       id: data.id,
