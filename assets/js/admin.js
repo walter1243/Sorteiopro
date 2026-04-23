@@ -421,20 +421,47 @@ function handlePastedImage(event) {
   }
 }
 
+
+function compressImage(file, callback) {
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Redimensiona para max 600px mantendo proporção
+      const maxWidth = 600;
+      let { width, height } = img;
+      if (width > maxWidth) {
+        height = (maxWidth / width) * height;
+        width = maxWidth;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Comprime para JPEG 70%
+      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+      callback(compressedBase64);
+    };
+    img.src = String(event.target?.result || '');
+  };
+  reader.readAsDataURL(file);
+}
+
 function handleImageFileSelect(event) {
   const file = event.target.files?.[0];
   if (!file) {
     return;
   }
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    setImageDataUrl(String(reader.result || ''));
-    showToast('Imagem selecionada da galeria.');
-  };
-  reader.readAsDataURL(file);
+  compressImage(file, (compressedBase64) => {
+    setImageDataUrl(compressedBase64);
+    showToast('Imagem selecionada e comprimida.');
+  });
 }
-
 function openPanel() {
   ui.loginBox.classList.add('hidden');
   ui.panel.classList.remove('hidden');
