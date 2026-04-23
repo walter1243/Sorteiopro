@@ -17,7 +17,7 @@ export const DEFAULT_RAFFLES = [
     totalValue: 50000,
     price: 50,
     totalQuotas: 1000,
-    imageUrl: '',
+    imageUrl: 'https://images.unsplash.com/photo-1552820728-8ac41f1ce891?w=400&h=300&fit=crop',
     status: 'active',
     drawMethod: 'random_internal',
     winner: null
@@ -30,7 +30,7 @@ export const DEFAULT_RAFFLES = [
     totalValue: 28000,
     price: 35,
     totalQuotas: 800,
-    imageUrl: '',
+    imageUrl: 'https://images.unsplash.com/photo-1590362891990-f776e74a5a38?w=400&h=300&fit=crop',
     status: 'paused',
     drawMethod: 'random_internal',
     winner: null
