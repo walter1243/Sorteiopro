@@ -121,7 +121,8 @@ const state = {
   drawRaffleId: null,       // raffle selected in draw section
   drawHistory: [],          // [{number, prizeValue, buyerName, buyerWhatsapp, date}]
   drawSpinTimer: null,
-  drawModalRaffleId: null   // raffle id being chosen in modal
+  drawModalRaffleId: null,  // raffle id being chosen in modal
+  quotaRenderToken: 0
 };
 
 let unsubTickets = null;
@@ -324,61 +325,107 @@ function renderQuotaOverview(raffle, soldList) {
   const totalQuotas = Number(raffle.totalQuotas || 0);
   const availableCount = Math.max(totalQuotas - soldList.length, 0);
 
-  ui.quotaOverviewSummary.textContent = `${soldList.length} compradas | ${availableCount} disponiveis | ${totalQuotas} no total`;
+  const isMobile = window.matchMedia('(max-width: 760px)').matches || isMobileInteraction();
+  const maxRendered = isMobile ? 2500 : 5000;
+  const renderTotal = Math.min(totalQuotas, maxRendered);
+  const token = ++state.quotaRenderToken;
 
-  ui.quotaOverviewGrid.innerHTML = Array.from({ length: totalQuotas }, (_, index) => {
-    const number = String(index).padStart(3, '0');
-    const isSold = soldNumbers.has(number);
-    const isWinner = raffle.winner?.number === number;
-    const soldEntry = soldByNumber.get(number);
-    const status = String(soldEntry?.status || '').toLowerCase();
-    const isClientSelected = ['awaiting_payment', 'pending', 'approved', 'paid', 'confirmed'].includes(status);
-    const firstName = soldEntry?.buyerName ? soldEntry.buyerName.trim().split(/\s+/)[0] : '';
-    const classes = ['quota-chip'];
+  const summaryBase = `${soldList.length} compradas | ${availableCount} disponiveis | ${totalQuotas} no total`;
+  ui.quotaOverviewSummary.textContent = totalQuotas > renderTotal
+    ? `${summaryBase} | exibindo ${renderTotal} primeiras para melhor desempenho`
+    : summaryBase;
 
-    if (isSold) {
-      classes.push('sold');
-    }
+  ui.quotaOverviewGrid.innerHTML = '';
 
-    if (isClientSelected) {
-      classes.push('client-selected');
-    }
+  const chunkSize = isMobile ? 180 : 320;
+  let cursor = 0;
 
-    if (isWinner) {
-      classes.push('winner');
-    }
-
-    if (!soldEntry) {
-      return `
-      <span class="${classes.join(' ')}">
-        <strong>${number}</strong>
-        ${firstName ? `<small>${firstName}</small>` : ''}
-      </span>
-    `;
-    }
-
-    return `
-      <button type="button" class="${classes.join(' ')} quota-chip-button" data-number="${number}" aria-label="Cota ${number} de ${firstName || 'comprador'}">
-        <strong>${number}</strong>
-        ${firstName ? `<small>${firstName}</small>` : ''}
-      </button>
-    `;
-  }).join('');
-
-  const detailTargets = [...ui.quotaOverviewGrid.querySelectorAll('.quota-chip-button')];
-  detailTargets.forEach((element) => {
-    const ticket = soldByNumber.get(element.dataset.number || '');
-    if (!ticket) {
+  const renderChunk = () => {
+    if (token !== state.quotaRenderToken) {
       return;
     }
 
-    if (isMobileInteraction()) {
-      element.addEventListener('click', () => openTicketDetail(ticket));
-      return;
+    const fragment = document.createDocumentFragment();
+    const end = Math.min(cursor + chunkSize, renderTotal);
+
+    for (; cursor < end; cursor += 1) {
+      const number = String(cursor).padStart(3, '0');
+      const soldEntry = soldByNumber.get(number);
+      const isSold = soldNumbers.has(number);
+      const isWinner = raffle.winner?.number === number;
+      const status = String(soldEntry?.status || '').toLowerCase();
+      const isClientSelected = ['awaiting_payment', 'pending', 'approved', 'paid', 'confirmed'].includes(status);
+      const firstName = soldEntry?.buyerName ? soldEntry.buyerName.trim().split(/\s+/)[0] : '';
+
+      let chip;
+      if (soldEntry) {
+        chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'quota-chip quota-chip-button';
+        chip.dataset.number = number;
+        chip.setAttribute('aria-label', `Cota ${number} de ${firstName || 'comprador'}`);
+
+        if (isMobileInteraction()) {
+          chip.addEventListener('click', () => openTicketDetail(soldEntry));
+        } else {
+          chip.addEventListener('dblclick', () => openTicketDetail(soldEntry));
+        }
+      } else {
+        chip = document.createElement('span');
+        chip.className = 'quota-chip';
+      }
+
+      if (isSold) chip.classList.add('sold');
+      if (isClientSelected) chip.classList.add('client-selected');
+      if (isWinner) chip.classList.add('winner');
+
+      const strong = document.createElement('strong');
+      strong.textContent = number;
+      chip.appendChild(strong);
+
+      if (firstName) {
+        const small = document.createElement('small');
+        small.textContent = firstName;
+        chip.appendChild(small);
+      }
+
+      fragment.appendChild(chip);
     }
 
-    element.addEventListener('dblclick', () => openTicketDetail(ticket));
-  });
+    ui.quotaOverviewGrid.appendChild(fragment);
+
+    if (cursor < renderTotal) {
+      requestAnimationFrame(renderChunk);
+    }
+  };
+
+  requestAnimationFrame(renderChunk);
+}
+
+function renderBuyersLoadingState() {
+  const raffle = currentRaffle();
+  ui.buyersRaffleSelect.innerHTML = state.raffles
+    .map((item) => `<option value="${item.id}">${item.prizeName || item.title} (${statusLabel(item.status)})</option>`)
+    .join('');
+  ui.buyersRaffleSelect.value = raffle?.id || '';
+  ui.buyersBody.innerHTML = '<tr><td colspan="4">Carregando cotas desta rifa...</td></tr>';
+  ui.quotaOverviewSummary.textContent = 'Carregando cotas da rifa selecionada...';
+  ui.quotaOverviewGrid.innerHTML = '';
+  ui.winnerBox.textContent = 'Carregando dados da rifa selecionada...';
+}
+
+function onRaffleSelectionChange(raffleId) {
+  if (!raffleId) {
+    return;
+  }
+
+  state.selectedRaffleId = raffleId;
+  state.drawRaffleId = raffleId;
+  state.soldTickets = {};
+  renderForm();
+  renderBuyersLoadingState();
+  renderDrawRaffleInfo();
+  subscribeTickets();
 }
 
 function renderSalesHistory() {
@@ -616,6 +663,10 @@ async function subscribeCatalog() {
       state.selectedRaffleId = state.raffles[0].id;
     }
 
+    if (!state.raffles.some((r) => r.id === state.drawRaffleId)) {
+      state.drawRaffleId = state.selectedRaffleId;
+    }
+
     renderForm();
     subscribeAllTickets();
     subscribeTickets();
@@ -624,6 +675,7 @@ async function subscribeCatalog() {
     console.error(error);
     state.raffles = DEFAULT_RAFFLES;
     state.selectedRaffleId = DEFAULT_RAFFLES[0].id;
+    state.drawRaffleId = state.selectedRaffleId;
     renderForm();
     subscribeAllTickets();
     subscribeTickets();
@@ -678,6 +730,8 @@ function subscribeTickets() {
   if (!raffle) {
     return;
   }
+
+  renderBuyersLoadingState();
 
   const ref = collection(db, 'artifacts', appId, 'public', 'data', `tickets_${raffle.id}`);
   unsubTickets = onSnapshot(ref, (snap) => {
@@ -774,7 +828,10 @@ async function onCreateRaffle() {
   const updated = [...state.raffles, raffle];
   await persistCatalog(updated);
   state.selectedRaffleId = id;
+  state.drawRaffleId = id;
   renderForm();
+  subscribeTickets();
+  renderDrawRaffleInfo();
   showToast('Nova rifa criada.');
 }
 
@@ -818,9 +875,11 @@ async function onDeleteRaffle() {
 
   state.raffles = state.raffles.filter((item) => item.id !== raffle.id);
   state.selectedRaffleId = state.raffles[0]?.id || DEFAULT_RAFFLES[0].id;
+  state.drawRaffleId = state.selectedRaffleId;
   renderForm();
   subscribeAllTickets();
   subscribeTickets();
+  renderDrawRaffleInfo();
   showToast('Rifa apagada com sucesso.');
 }
 
@@ -914,7 +973,7 @@ function renderDrawRaffleInfo() {
   }
 
   const totalQuotas = Number(raffle.totalQuotas || 0);
-  const usedSold = raffle.id === state.selectedRaffleId ? Object.keys(state.soldTickets).length : 0;
+  const usedSold = raffle.id === state.drawRaffleId ? Object.keys(state.soldTickets).length : 0;
   const pct = totalQuotas > 0 ? Math.min((usedSold / totalQuotas) * 100, 100) : 0;
   ui.drawRafflePct.textContent = `Progresso: ${pct.toFixed(1).replace('.', ',')}%`;
   ui.drawProgressFill.style.width = `${pct}%`;
@@ -936,8 +995,7 @@ function closeDrawPrizeModal() {
 }
 
 function openDrawRaffleModal() {
-  const activeRaffles = state.raffles.filter((r) => r.status === 'active');
-  const all = activeRaffles.length ? activeRaffles : state.raffles;
+  const all = state.raffles;
   const selected = all.find((r) => r.id === (state.drawRaffleId || state.selectedRaffleId)) || all[0];
   state.drawModalRaffleId = selected?.id || null;
 
@@ -956,7 +1014,7 @@ function openDrawRaffleModal() {
       return `
         <button type="button" class="draw-modal-raffle-btn ${activeClass}" data-draw-modal-raffle-id="${r.id}">
           <strong>${r.prizeName || r.title}</strong>
-          <span style="color:var(--muted);font-size:0.72rem;"> — R$ ${r.price?.toFixed(2).replace('.', ',')} por cota</span>
+          <span style="color:var(--muted);font-size:0.72rem;"> — ${statusLabel(r.status)} | R$ ${r.price?.toFixed(2).replace('.', ',')} por cota</span>
         </button>`;
     })
     .join('');
@@ -986,13 +1044,9 @@ function closeDrawRaffleModal() {
 
 function confirmDrawRaffleModal() {
   if (state.drawModalRaffleId) {
-    state.drawRaffleId = state.drawModalRaffleId;
-    // Sync selected raffle to also update soldTickets view
-    state.selectedRaffleId = state.drawRaffleId;
-    subscribeTickets();
+    onRaffleSelectionChange(state.drawModalRaffleId);
   }
   closeDrawRaffleModal();
-  renderDrawRaffleInfo();
 }
 
 async function onAdminQuickDraw() {
@@ -1259,14 +1313,10 @@ async function init() {
   });
 
   ui.raffleSelect.addEventListener('change', (event) => {
-    state.selectedRaffleId = event.target.value;
-    renderForm();
-    subscribeTickets();
+    onRaffleSelectionChange(event.target.value);
   });
   ui.buyersRaffleSelect.addEventListener('change', (event) => {
-    state.selectedRaffleId = event.target.value;
-    renderForm();
-    subscribeTickets();
+    onRaffleSelectionChange(event.target.value);
   });
 
   ui.raffleTotalValue.addEventListener('input', recalcQuotaPrice);
