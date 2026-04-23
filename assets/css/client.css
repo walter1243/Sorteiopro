@@ -777,6 +777,142 @@ button:disabled {
   }
 }
 
+@media (max-width: 420px) {
+  .client-tabs {
+    gap: 6px;
+  }
+
+  .tab-btn,
+  .ghost-action,
+  button {
+    border-radius: 9px;
+    letter-spacing: 0.08em;
+  }
+
+  .tab-btn {
+    padding: 9px 10px;
+    font-size: 0.68rem;
+  }
+
+  .panel-head p {
+    margin: 0;
+  }
+
+  #raffle-cards .raffle-card {
+    max-width: none;
+    padding: 8px;
+  }
+
+  #raffle-cards .card-image {
+    height: 120px;
+  }
+
+  .raffle-card strong {
+    font-size: 0.92rem;
+  }
+
+  .raffle-card .status,
+  .raffle-card p,
+  .raffle-card-action,
+  .badge,
+  .lookup-alert,
+  #modal-selected-info,
+  #modal-price,
+  .modal-status {
+    font-size: 0.72rem;
+  }
+
+  .title-media h2 {
+    font-size: 1.4rem;
+    line-height: 1;
+  }
+
+  .winner-alert,
+  .instant-prize-alert,
+  .summary,
+  .ticket-item {
+    padding: 9px;
+  }
+
+  input,
+  select,
+  button {
+    padding: 10px;
+    font-size: 0.92rem;
+  }
+
+  .checkbox {
+    font-size: 0.76rem;
+  }
+
+  .quota-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    max-height: 280px;
+  }
+
+  .quota {
+    min-height: 38px;
+    padding: 7px 0;
+    font-size: 0.68rem;
+  }
+
+  .popup-box,
+  .payment-modal-box,
+  .prize-claim-modal,
+  .modal {
+    width: min(100vw - 12px, 100%);
+  }
+
+  .raffle-selection-modal {
+    width: min(100vw - 12px, 100%);
+    border-radius: 12px;
+  }
+
+  .raffle-selection-modal .modal-header {
+    padding: 18px 16px 8px;
+  }
+
+  .raffle-selection-modal .modal-body {
+    padding: 0 16px 12px;
+  }
+
+  .raffle-selection-modal .modal-footer {
+    padding: 8px 16px 16px;
+  }
+
+  .modal-main-image {
+    height: 150px;
+    margin: 8px 0 12px;
+  }
+
+  .modal-raffles-list .modal-raffle-btn {
+    flex-basis: min(88vw, 280px);
+    padding: 9px;
+  }
+
+  .payment-methods-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-method-btn {
+    padding: 14px 12px;
+  }
+
+  .method-icon {
+    font-size: 2rem;
+  }
+
+  .ticket-item strong {
+    font-size: 1.15rem;
+  }
+
+  .floating-feed {
+    top: 68px;
+    width: calc(100vw - 12px);
+  }
+}
+
 /* ===== CUSTOM CHECKOUT STYLES ===== */
 
 .payment-step {

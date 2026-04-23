@@ -129,6 +129,33 @@ a {
   }
 }
 
+@media (max-width: 420px) {
+  .topbar {
+    padding: 10px 12px;
+  }
+
+  .page {
+    width: min(100vw - 12px, 100%);
+    margin: 12px auto 36px;
+  }
+
+  .panel {
+    border-radius: 18px;
+    padding: 14px;
+  }
+
+  .muted {
+    font-size: 0.8rem;
+  }
+
+  .toast {
+    right: 8px;
+    left: 8px;
+    bottom: 8px;
+    max-width: none;
+  }
+}
+
 .panel {
   background: linear-gradient(180deg, #162033, #0f1521);
   border: 1px solid var(--line);
