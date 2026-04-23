@@ -88,12 +88,12 @@
         <button id="close-my-tickets-popup" type="button" class="ghost-action">Fechar</button>
       </div>
       <form id="my-tickets-lookup-form" class="my-tickets-lookup-form">
+        <small id="my-tickets-lookup-msg" class="lookup-alert lookup-alert-info" role="status" aria-live="polite">Use o mesmo CPF ou telefone informado na compra.</small>
         <label for="my-tickets-document" class="muted">Digite seu CPF ou Telefone</label>
         <div class="my-tickets-lookup-row">
           <input id="my-tickets-document" placeholder="Somente numeros" inputmode="numeric" autocomplete="off" required />
           <button id="my-tickets-lookup-btn" type="submit">Buscar</button>
         </div>
-        <small id="my-tickets-lookup-msg" class="muted">Use o mesmo CPF ou telefone informado na compra.</small>
       </form>
       <div id="my-tickets-popup-list" class="ticket-list"></div>
     </div>
@@ -113,6 +113,7 @@
 
         <div class="selection-area">
           <h3>Escolha o sorteio ativo:</h3>
+          <p class="modal-swipe-hint" aria-hidden="true">>>> Passe para o lado e selecione</p>
           <div id="modal-raffles-list" class="modal-raffles-list"></div>
         </div>
       </div>

@@ -87,6 +87,7 @@ const state = {
   checkoutContext: null,
   myTickets: [],
   lookupTickets: [],
+  lookupHasSearched: false,
   raffleModal: {
     raffleId: null
   },
@@ -978,6 +979,11 @@ function renderHeader() {
 
 function renderMyTickets() {
   if (!state.lookupTickets.length) {
+    if (state.lookupHasSearched) {
+      ui.myTicketsPopupList.innerHTML = '';
+      return;
+    }
+
     ui.myTicketsPopupList.innerHTML = '<p class="muted">Nenhuma cota carregada. Informe seu CPF ou telefone para buscar.</p>';
     return;
   }
@@ -993,6 +999,12 @@ function renderMyTickets() {
     .join('');
 
   ui.myTicketsPopupList.innerHTML = cards;
+}
+
+function setLookupAlert(message, type = 'info') {
+  ui.myTicketsLookupMsg.textContent = message;
+  ui.myTicketsLookupMsg.classList.remove('lookup-alert-info', 'lookup-alert-success', 'lookup-alert-error');
+  ui.myTicketsLookupMsg.classList.add(`lookup-alert-${type}`);
 }
 
 function normalizeLookupDocument(value) {
@@ -1013,34 +1025,38 @@ async function onLookupMyTickets(event) {
 
   const documentDigits = normalizeLookupDocument(ui.myTicketsDocument.value);
   if (!documentDigits) {
+    setLookupAlert('Informe o CPF ou telefone para buscar suas cotas.', 'error');
     showToast('Informe o CPF ou telefone para buscar suas cotas.');
     return;
   }
 
   if (documentDigits.length < 10) {
+    setLookupAlert('Digite um CPF ou telefone valido.', 'error');
     showToast('Digite um CPF ou telefone valido.');
     return;
   }
 
   ui.myTicketsLookupBtn.disabled = true;
-  ui.myTicketsLookupMsg.textContent = 'Buscando cotas...';
+  setLookupAlert('Buscando cotas...', 'info');
 
   try {
     const data = await fetchTicketsByDocument(documentDigits);
     state.lookupTickets = Array.isArray(data?.tickets) ? data.tickets : [];
+    state.lookupHasSearched = true;
 
     if (!state.lookupTickets.length) {
-      ui.myTicketsLookupMsg.textContent = 'Nenhuma cota encontrada para este documento.';
+      setLookupAlert('Nenhuma cota encontrada para este documento.', 'error');
     } else {
-      ui.myTicketsLookupMsg.textContent = `${state.lookupTickets.length} cota(s) encontrada(s).`;
+      setLookupAlert(`${state.lookupTickets.length} cota(s) encontrada(s).`, 'success');
     }
 
     renderMyTickets();
   } catch (error) {
     console.error(error);
     state.lookupTickets = [];
+    state.lookupHasSearched = true;
     renderMyTickets();
-    ui.myTicketsLookupMsg.textContent = error?.message || 'Erro ao buscar cotas.';
+    setLookupAlert(error?.message || 'Erro ao buscar cotas.', 'error');
     showToast(error?.message || 'Erro ao buscar cotas.');
   } finally {
     ui.myTicketsLookupBtn.disabled = false;
@@ -1254,7 +1270,10 @@ async function init() {
   ui.tabMine.addEventListener('click', () => {
     state.activeTab = 'mine';
     renderTabs();
-    ui.myTicketsLookupMsg.textContent = 'Use o mesmo CPF ou telefone informado na compra.';
+    state.lookupHasSearched = false;
+    state.lookupTickets = [];
+    setLookupAlert('Use o mesmo CPF ou telefone informado na compra.', 'info');
+    renderMyTickets();
     ui.myTicketsPopup.classList.remove('hidden');
     ui.myTicketsDocument.focus();
   });
