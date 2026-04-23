@@ -62,7 +62,7 @@
         <form id="checkout-form">
           <input id="name" placeholder="Nome completo" required />
           <input id="email" type="email" placeholder="E-mail" required />
-          <input id="cpf" placeholder="CPF" required />
+          <input id="cpf" placeholder="CPF" inputmode="numeric" required />
           <label class="checkbox">
             <input id="terms" type="checkbox" required />
             <span>Aceito os termos de uso e politica de privacidade.</span>
@@ -73,7 +73,7 @@
             <p>Total: <strong id="selected-total">R$ 0,00</strong></p>
           </div>
 
-          <button id="buy-btn" type="submit">Pagar com Mercado Pago</button>
+          <button id="buy-btn" type="submit">Comprar cota</button>
           <small id="purchase-msg" class="muted"></small>
         </form>
       </aside>

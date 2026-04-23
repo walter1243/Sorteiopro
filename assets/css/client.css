@@ -447,6 +447,7 @@ button:disabled {
   display: grid;
   place-items: center;
   padding: 16px;
+  overflow: hidden;
 }
 
 .overlay.hidden {
@@ -848,7 +849,7 @@ button:disabled {
   .quota-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
-    max-height: 280px;
+    max-height: 380px;
   }
 
   .quota {
@@ -862,11 +863,15 @@ button:disabled {
   .prize-claim-modal,
   .modal {
     width: min(100vw - 12px, 100%);
+    max-height: 85vh;
+    overflow-y: auto;
   }
 
   .raffle-selection-modal {
     width: min(100vw - 12px, 100%);
     border-radius: 12px;
+    max-height: 90vh;
+    overflow-y: auto;
   }
 
   .raffle-selection-modal .modal-header {
@@ -879,6 +884,11 @@ button:disabled {
 
   .raffle-selection-modal .modal-footer {
     padding: 8px 16px 16px;
+  }
+
+  .right form {
+    max-height: 70vh;
+    overflow-y: auto;
   }
 
   .modal-main-image {
