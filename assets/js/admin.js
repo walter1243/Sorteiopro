@@ -48,6 +48,7 @@ const ui = {
   imagePasteZone: document.getElementById('image-paste-zone'),
   prizeImagePreview: document.getElementById('prize-image-preview'),
   imageSelectionHint: document.getElementById('image-selection-hint'),
+  deleteRaffleBtn: document.getElementById('delete-raffle-btn'),
   createRaffleBtn: document.getElementById('create-raffle-btn'),
   drawBtn: document.getElementById('draw-btn'),
   buyersRaffleSelect: document.getElementById('buyers-raffle-select'),
@@ -455,8 +456,8 @@ function compressImage(file, callback) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      // Redimensiona para max 480px mantendo proporção
-      const maxWidth = 480;
+      // Redimensiona para max 360px mantendo proporção
+      const maxWidth = 360;
       let { width, height } = img;
       if (width > maxWidth) {
         height = (maxWidth / width) * height;
@@ -467,8 +468,8 @@ function compressImage(file, callback) {
       canvas.height = height;
       ctx.drawImage(img, 0, 0, width, height);
       
-      // Comprime para JPEG 60% para reduzir payload da API
-      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+      // Comprime para JPEG 45% para reduzir payload da API em mobile
+      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.45);
       callback(compressedBase64);
     };
     img.src = String(event.target?.result || '');
@@ -733,6 +734,39 @@ async function onCreateRaffle() {
   showToast('Nova rifa criada.');
 }
 
+async function onDeleteRaffle() {
+  const raffle = currentRaffle();
+  if (!raffle) {
+    return;
+  }
+
+  if (state.raffles.length <= 1) {
+    showToast('Mantenha ao menos uma rifa no catalogo.');
+    return;
+  }
+
+  const confirmed = window.confirm(`Deseja apagar a rifa "${raffle.prizeName || raffle.title}"?`);
+  if (!confirmed) {
+    return;
+  }
+
+  const response = await fetch(`/api/catalog?id=${encodeURIComponent(raffle.id)}`, {
+    method: 'DELETE'
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error || 'Falha ao apagar rifa no servidor');
+  }
+
+  state.raffles = state.raffles.filter((item) => item.id !== raffle.id);
+  state.selectedRaffleId = state.raffles[0]?.id || DEFAULT_RAFFLES[0].id;
+  renderForm();
+  subscribeAllTickets();
+  subscribeTickets();
+  showToast('Rifa apagada com sucesso.');
+}
+
 async function onDraw() {
   const raffle = currentRaffle();
   const totalQuotas = Number(raffle?.totalQuotas || 0);
@@ -856,6 +890,14 @@ async function init() {
   ui.prizeImageFile.addEventListener('change', handleImageFileSelect);
 
   ui.raffleForm.addEventListener('submit', onSaveRaffle);
+  ui.deleteRaffleBtn.addEventListener('click', async () => {
+    try {
+      await onDeleteRaffle();
+    } catch (error) {
+      console.error(error);
+      showToast(error?.message || 'Falha ao apagar rifa.');
+    }
+  });
   ui.createRaffleBtn.addEventListener('click', onCreateRaffle);
   ui.drawBtn.addEventListener('click', onDraw);
 

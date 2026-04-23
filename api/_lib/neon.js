@@ -422,8 +422,29 @@ export async function listCatalogRaffles() {
     ORDER BY created_at ASC
   `;
 
-  return (rows || []).map((row) => {
+  return (rows || [])
+    .filter((row) => {
+      const raw = row.raw_payload && typeof row.raw_payload === 'object' ? row.raw_payload : {};
+      if (raw.__catalog === true) {
+        return true;
+      }
+
+      // Backward compatibility with older admin saves.
+      if ('totalQuotas' in raw || 'imageUrl' in raw || 'prizeNumbers' in raw || 'prizeWhatsapp' in raw) {
+        return true;
+      }
+
+      // Fallback for rows with explicit quota/image columns.
+      if (Number(row.total_quotas || 0) > 0 || Boolean(row.cover_image_url)) {
+        return true;
+      }
+
+      // Ignore rows created only by payment metadata.
+      return false;
+    })
+    .map((row) => {
     const raw = row.raw_payload && typeof row.raw_payload === 'object' ? row.raw_payload : {};
+    const prizeNumbers = Array.isArray(raw.prizeNumbers) ? raw.prizeNumbers : [];
     return {
       id: raw.id || row.id,
       title: raw.title || raw.prizeName || row.title || 'Rifa',
@@ -434,7 +455,7 @@ export async function listCatalogRaffles() {
       status: raw.status || row.status || 'paused',
       winner: raw.winner || null,
       drawMethod: raw.drawMethod || 'random_internal',
-      prizeNumbers: Array.isArray(raw.prizeNumbers) ? raw.prizeNumbers : [],
+      prizeNumbers,
       prizeWhatsapp: raw.prizeWhatsapp || ''
     };
   });
@@ -453,6 +474,11 @@ export async function saveCatalogRaffles(items) {
       continue;
     }
 
+    const rawPayload = {
+      ...raffle,
+      __catalog: true
+    };
+
     await sql`
       INSERT INTO rifas (
         id,
@@ -470,7 +496,7 @@ export async function saveCatalogRaffles(items) {
         ${Number(raffle.totalQuotas || 0)},
         ${raffle.imageUrl || null},
         ${raffle.status || 'paused'},
-        ${raffle},
+        ${rawPayload},
         NOW()
       )
       ON CONFLICT (id)
@@ -484,6 +510,21 @@ export async function saveCatalogRaffles(items) {
         updated_at = NOW()
     `;
   }
+}
+
+export async function deleteCatalogRaffle(raffleId) {
+  const sql = requireSqlClient();
+  await ensureBusinessSchema();
+
+  const id = String(raffleId || '').trim();
+  if (!id) {
+    return;
+  }
+
+  await sql`
+    DELETE FROM rifas
+    WHERE id = ${id}
+  `;
 }
 
 export async function ensureRifaExists(raffleId, title = 'Rifa') {
