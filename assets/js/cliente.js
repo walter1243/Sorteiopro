@@ -97,6 +97,7 @@ const state = {
 
 let unsubTickets = null;
 let liveFeedTimer = null;
+let catalogRefreshTimer = null;
 let mpClient = null;
 let paymentBrickController = null;
 let pixStatusPollTimer = null;
@@ -1148,25 +1149,42 @@ function setupCookieConsent() {
 }
 
 function subscribeCatalog() {
-  const catalogRef = doc(db, 'artifacts', appId, 'public', 'data', 'raffle', 'catalog');
+  const refreshCatalog = async () => {
+    try {
+      const response = await fetch('/api/catalog', { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error('Falha ao carregar catalogo');
+      }
 
-  onSnapshot(catalogRef, async (snap) => {
-    if (!snap.exists()) {
-      await setDoc(catalogRef, { items: DEFAULT_RAFFLES });
-      return;
+      const payload = await response.json();
+      const items = Array.isArray(payload.items) && payload.items.length ? payload.items : DEFAULT_RAFFLES;
+      state.raffles = items;
+
+      if (!items.some((item) => item.id === state.selectedRaffleId)) {
+        state.selectedRaffleId = items.find((item) => item.status === 'active')?.id || items[0].id;
+      }
+
+      handleActiveRaffleFlow();
+      subscribeTickets();
+      render();
+    } catch (error) {
+      console.error(error);
+      if (!state.raffles.length) {
+        state.raffles = DEFAULT_RAFFLES;
+        state.selectedRaffleId = DEFAULT_RAFFLES[0].id;
+        handleActiveRaffleFlow();
+        subscribeTickets();
+        render();
+      }
     }
+  };
 
-    const items = Array.isArray(snap.data().items) ? snap.data().items : DEFAULT_RAFFLES;
-    state.raffles = items;
+  refreshCatalog();
 
-    if (!items.some((item) => item.id === state.selectedRaffleId)) {
-      state.selectedRaffleId = items.find((item) => item.status === 'active')?.id || items[0].id;
-    }
-
-    handleActiveRaffleFlow();
-    subscribeTickets();
-    render();
-  });
+  if (catalogRefreshTimer) {
+    clearInterval(catalogRefreshTimer);
+  }
+  catalogRefreshTimer = setInterval(refreshCatalog, 15000);
 }
 
 function subscribeTickets() {
@@ -1426,7 +1444,7 @@ async function init() {
     subscribeCatalog();
     handleActiveRaffleFlow();
     render();
-    showToast('Modo local ativo. Exibindo catalogo salvo neste navegador.');
+    showToast('Modo local ativo para compras. Catalogo de rifas carregado via servidor.');
   }
 }
 

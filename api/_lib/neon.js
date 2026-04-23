@@ -411,3 +411,74 @@ export async function updatePedidoByExternalReference(externalReference, updates
     WHERE external_reference = ${externalReference}
   `;
 }
+
+export async function listCatalogRaffles() {
+  const sql = requireSqlClient();
+  await ensureBusinessSchema();
+
+  const rows = await sql`
+    SELECT id, title, price, total_quotas, cover_image_url, status, raw_payload
+    FROM rifas
+    ORDER BY created_at ASC
+  `;
+
+  return (rows || []).map((row) => {
+    const raw = row.raw_payload && typeof row.raw_payload === 'object' ? row.raw_payload : {};
+    return {
+      ...raw,
+      id: raw.id || row.id,
+      title: raw.title || raw.prizeName || row.title || 'Rifa',
+      prizeName: raw.prizeName || raw.title || row.title || 'Rifa',
+      price: Number(raw.price ?? row.price ?? 0),
+      totalQuotas: Number(raw.totalQuotas ?? row.total_quotas ?? 0),
+      imageUrl: raw.imageUrl || row.cover_image_url || '',
+      status: raw.status || row.status || 'paused'
+    };
+  });
+}
+
+export async function saveCatalogRaffles(items) {
+  const sql = requireSqlClient();
+  await ensureBusinessSchema();
+
+  const list = Array.isArray(items) ? items : [];
+
+  for (const item of list) {
+    const raffle = item && typeof item === 'object' ? item : {};
+    const raffleId = String(raffle.id || '').trim();
+    if (!raffleId) {
+      continue;
+    }
+
+    await sql`
+      INSERT INTO rifas (
+        id,
+        title,
+        price,
+        total_quotas,
+        cover_image_url,
+        status,
+        raw_payload,
+        updated_at
+      ) VALUES (
+        ${raffleId},
+        ${raffle.title || raffle.prizeName || 'Rifa'},
+        ${Number(raffle.price || 0)},
+        ${Number(raffle.totalQuotas || 0)},
+        ${raffle.imageUrl || null},
+        ${raffle.status || 'paused'},
+        ${raffle},
+        NOW()
+      )
+      ON CONFLICT (id)
+      DO UPDATE SET
+        title = EXCLUDED.title,
+        price = EXCLUDED.price,
+        total_quotas = EXCLUDED.total_quotas,
+        cover_image_url = EXCLUDED.cover_image_url,
+        status = EXCLUDED.status,
+        raw_payload = EXCLUDED.raw_payload,
+        updated_at = NOW()
+    `;
+  }
+}

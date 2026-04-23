@@ -516,21 +516,33 @@ async function onSaveSiteConfig(event) {
 }
 
 async function persistCatalog(updated) {
-  const ref = doc(db, 'artifacts', appId, 'public', 'data', 'raffle', 'catalog');
-  await setDoc(ref, { items: updated });
+  const response = await fetch('/api/catalog', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ items: updated })
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error || 'Falha ao salvar catalogo no servidor');
+  }
+
   state.raffles = updated;
 }
 
-function subscribeCatalog() {
-  const ref = doc(db, 'artifacts', appId, 'public', 'data', 'raffle', 'catalog');
-
-  onSnapshot(ref, async (snap) => {
-    if (!snap.exists()) {
-      await setDoc(ref, { items: DEFAULT_RAFFLES });
-      return;
+async function subscribeCatalog() {
+  try {
+    const response = await fetch('/api/catalog', { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error('Falha ao carregar catalogo');
     }
 
-    state.raffles = Array.isArray(snap.data().items) ? snap.data().items : DEFAULT_RAFFLES;
+    const payload = await response.json();
+    const items = Array.isArray(payload.items) && payload.items.length ? payload.items : DEFAULT_RAFFLES;
+    state.raffles = items;
+
     if (!state.raffles.some((r) => r.id === state.selectedRaffleId)) {
       state.selectedRaffleId = state.raffles[0].id;
     }
@@ -538,7 +550,15 @@ function subscribeCatalog() {
     renderForm();
     subscribeAllTickets();
     subscribeTickets();
-  });
+  } catch (error) {
+    console.error(error);
+    state.raffles = DEFAULT_RAFFLES;
+    state.selectedRaffleId = DEFAULT_RAFFLES[0].id;
+    renderForm();
+    subscribeAllTickets();
+    subscribeTickets();
+    showToast('Falha ao carregar catalogo remoto. Exibindo catalogo padrao.');
+  }
 }
 
 function subscribeAllTickets() {
@@ -811,14 +831,13 @@ async function init() {
 
   try {
     state.user = await ensureAuth();
-    subscribeCatalog();
+    await subscribeCatalog();
     subscribeSiteConfig();
     showAdminSection('section-config');
   } catch (error) {
     console.error(error);
-    showToast('Falha de conexao com Firebase. Login local disponivel, mas sem salvar dados online.');
-    renderForm();
-    renderBuyers();
+    await subscribeCatalog();
+    showToast('Falha de autenticacao. Catalogo remoto continua disponivel.');
     showAdminSection('section-config');
   }
 
