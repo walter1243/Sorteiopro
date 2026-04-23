@@ -71,7 +71,7 @@
   background: #0f1725;
   border: 1px solid #2f3d56;
   color: var(--text);
-  text-align: left;
+  text-align: center;
   padding: 10px;
   border-radius: 12px;
   cursor: pointer;
@@ -189,6 +189,23 @@
   text-transform: uppercase;
   letter-spacing: 0.09em;
   font-weight: 800;
+}
+
+/* Quick-draw winners in quota grid */
+.quota.quick-winner {
+  background: linear-gradient(135deg, #7c3c0e, #b85e1a);
+  border-color: #f59e0b;
+  color: #fff8e1;
+  position: relative;
+}
+
+.quota.quick-winner::after {
+  content: '🎁';
+  position: absolute;
+  top: -5px;
+  right: -3px;
+  font-size: 10px;
+  line-height: 1;
 }
 
 .badge {

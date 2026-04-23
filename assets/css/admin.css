@@ -479,6 +479,316 @@ td {
   border: 1px solid #2e3f5c;
 }
 
+/* ===== DRAW SECTION ===== */
+.draw-raffle-info {
+  background: #0f1829;
+  border: 1px solid #2e4060;
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.draw-raffle-card-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.draw-raffle-img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #2e3f5c;
+  flex-shrink: 0;
+}
+
+.draw-raffle-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.draw-raffle-text strong {
+  display: block;
+  font-size: 0.95rem;
+  color: #e8f0ff;
+}
+
+.draw-raffle-text p {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+}
+
+.draw-change-btn {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  padding: 8px 10px;
+}
+
+.draw-progress-track {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: #0b1321;
+  border: 1px solid #29415c;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.draw-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2bc46a 0%, #7effae 100%);
+  box-shadow: 0 0 10px #2bc46a55;
+  transition: width 400ms ease;
+}
+
+.draw-mode-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.draw-mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 10px;
+  border-radius: 14px;
+  background: #0f1829;
+  border: 2px solid #2e4060;
+  color: #8ea3c8;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: border-color 150ms, background 150ms, color 150ms;
+}
+
+.draw-mode-btn.active {
+  border-color: #3d8cff;
+  background: #152240;
+  color: #e5f0ff;
+}
+
+.draw-mode-btn .draw-mode-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.draw-mode-btn strong {
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.draw-mode-btn small {
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.draw-display {
+  background: #06090f;
+  border: 1px solid #1e3050;
+  border-radius: 18px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 14px;
+  min-height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.draw-screen {
+  width: 100%;
+}
+
+.draw-spinning-number {
+  font-size: 4rem;
+  font-weight: 900;
+  color: #e8f0ff;
+  font-family: 'Bebas Neue', monospace, sans-serif;
+  letter-spacing: 0.08em;
+  transition: opacity 50ms;
+  text-shadow: 0 0 30px rgba(61, 140, 255, 0.4);
+}
+
+.draw-spinning-number.spinning {
+  animation: draw-spin-blur 0.08s steps(1) infinite;
+}
+
+@keyframes draw-spin-blur {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.draw-status-text {
+  margin-top: 8px;
+  font-size: 0.78rem;
+}
+
+.draw-winner-panel {
+  width: 100%;
+  text-align: center;
+  animation: admin-section-fade 300ms ease-out;
+}
+
+.draw-winner-panel.hidden {
+  display: none;
+}
+
+.draw-winner-trophy {
+  font-size: 2.5rem;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.draw-winner-panel h4 {
+  margin: 0 0 4px;
+  color: #ffd060;
+  font-size: 1.1rem;
+}
+
+.draw-winner-number {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #e8f0ff;
+  font-family: 'Bebas Neue', monospace, sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.draw-start-btn {
+  width: 100%;
+  font-size: 1rem;
+  padding: 14px;
+  background: linear-gradient(135deg, #2057c2, #1e88ff);
+  border-color: #5badff;
+  margin-bottom: 16px;
+}
+
+.draw-start-btn:disabled {
+  opacity: 0.45;
+}
+
+.draw-whatsapp-btn {
+  margin-top: 10px;
+  background: #1a4a2a;
+  border-color: #3bce6c;
+  color: #d4ffe4;
+  padding: 10px 16px;
+  font-size: 0.82rem;
+}
+
+.draw-whatsapp-btn.hidden {
+  display: none;
+}
+
+.draw-history-box {
+  margin-bottom: 16px;
+}
+
+.draw-history-box h4 {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: #b8cae8;
+}
+
+.draw-history-list {
+  display: grid;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.draw-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #0f1829;
+  border: 1px solid #1e3050;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+}
+
+.draw-history-item .draw-h-number {
+  font-size: 1.1rem;
+  font-weight: 900;
+  font-family: 'Bebas Neue', monospace;
+  color: #e8f0ff;
+}
+
+.draw-history-item .draw-h-prize {
+  color: #ffd060;
+  font-weight: 700;
+}
+
+.draw-history-item .draw-h-buyer {
+  color: #7eb4ff;
+  font-size: 0.74rem;
+}
+
+.draw-history-item .draw-h-time {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.draw-site-config {
+  border: 1px solid #2e4060;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 14px;
+  background: #0f1829;
+}
+
+.draw-site-config summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  user-select: none;
+}
+
+.draw-prize-modal-box {
+  width: min(380px, calc(100vw - 28px));
+}
+
+.draw-modal-raffle-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.draw-modal-raffle-btn {
+  text-align: left;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #0f1829;
+  border: 1px solid #2e4060;
+  color: #c9d7ef;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.draw-modal-raffle-btn.active {
+  border-color: #3d8cff;
+  background: #152240;
+  color: #e5f0ff;
+}
+
 .sep {
   border: 0;
   border-top: 1px solid #2e3f5c;

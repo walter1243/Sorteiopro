@@ -66,6 +66,7 @@ const ui = {
   name: document.getElementById('name'),
   email: document.getElementById('email'),
   cpf: document.getElementById('cpf'),
+  whatsapp: document.getElementById('whatsapp'),
   liveFeedList: document.getElementById('live-feed-list'),
   cookieModal: document.getElementById('cookie-lgpd-modal'),
   cookieCheck: document.getElementById('cookie-consent-check'),
@@ -783,6 +784,7 @@ async function saveApprovedTickets(checkoutContext) {
         buyerName: checkoutContext.buyer.name,
         buyerEmail: checkoutContext.buyer.email,
         buyerCpf: checkoutContext.buyer.cpf,
+        buyerWhatsapp: checkoutContext.buyer.whatsapp || '',
         status: 'approved',
         raffleId: checkoutContext.product.id,
         raffleTitle: checkoutContext.product.prizeName || checkoutContext.product.title,
@@ -884,16 +886,21 @@ function renderQuotaGrid() {
     return;
   }
 
+  const quickWinners = new Set(
+    (Array.isArray(product.quickDrawWinners) ? product.quickDrawWinners : []).map((w) => w.number)
+  );
+
   ui.quotaGrid.innerHTML = '';
 
   for (let i = 0; i < Number(product.totalQuotas); i += 1) {
     const number = normalizeQuotaNumber(i);
     const sold = !!state.soldTickets[number];
     const selected = state.selectedNumbers.includes(number);
+    const isQuickWinner = quickWinners.has(number);
 
     const button = document.createElement('button');
     button.textContent = number;
-    button.className = `quota ${sold ? 'sold' : ''} ${selected ? 'selected' : ''}`.trim();
+    button.className = `quota ${sold ? 'sold' : ''} ${selected ? 'selected' : ''} ${isQuickWinner ? 'quick-winner' : ''}`.trim();
 
     button.addEventListener('click', () => {
       if (sold || product.status !== 'active') {
@@ -984,8 +991,16 @@ function renderHeader() {
       ui.winnerAlert.classList.remove('hidden');
     }
   } else {
-    ui.winnerAlert.textContent = '';
-    ui.winnerAlert.classList.add('hidden');
+    // Show quick-draw winners if any
+    const quickWinners = Array.isArray(product.quickDrawWinners) ? product.quickDrawWinners : [];
+    if (quickWinners.length) {
+      const last = quickWinners[quickWinners.length - 1];
+      ui.winnerAlert.innerHTML = `🎁 Cota premiada: <strong>${last.number}</strong>${last.prizeValue ? ` — R$ ${Number(last.prizeValue).toFixed(2).replace('.', ',')}` : ''}`;
+      ui.winnerAlert.classList.remove('hidden');
+    } else {
+      ui.winnerAlert.textContent = '';
+      ui.winnerAlert.classList.add('hidden');
+    }
   }
 }
 
@@ -1248,7 +1263,8 @@ async function processCheckout(event) {
       buyer: {
         name: ui.name.value.trim(),
         email: ui.email.value.trim(),
-        cpf: ui.cpf.value.trim()
+        cpf: ui.cpf.value.trim(),
+        whatsapp: (ui.whatsapp?.value || '').trim()
       }
     };
 

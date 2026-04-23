@@ -66,7 +66,37 @@ const ui = {
   ticketDetailStatus: document.getElementById('ticket-detail-status'),
   ticketDetailDate: document.getElementById('ticket-detail-date'),
   siteConfigForm: document.getElementById('site-config-form'),
-  siteWhatsapp: document.getElementById('site-whatsapp')
+  siteWhatsapp: document.getElementById('site-whatsapp'),
+  // Draw section
+  drawRaffleInfo: document.getElementById('draw-raffle-info'),
+  drawRaffleImg: document.getElementById('draw-raffle-img'),
+  drawRaffleName: document.getElementById('draw-raffle-name'),
+  drawRafflePct: document.getElementById('draw-raffle-pct'),
+  drawProgressFill: document.getElementById('draw-progress-fill'),
+  drawChangeRaffleBtn: document.getElementById('draw-change-raffle-btn'),
+  drawModeBtns: [...document.querySelectorAll('.draw-mode-btn')],
+  drawDisplay: document.getElementById('draw-display'),
+  drawScreen: document.getElementById('draw-screen'),
+  drawSpinningNumber: document.getElementById('draw-spinning-number'),
+  drawStatusText: document.getElementById('draw-status-text'),
+  drawWinnerPanel: document.getElementById('draw-winner-panel'),
+  drawWinnerLabel: document.getElementById('draw-winner-label'),
+  drawWinnerNameText: document.getElementById('draw-winner-name-text'),
+  drawWinnerNumberText: document.getElementById('draw-winner-number-text'),
+  drawWhatsappBtn: document.getElementById('draw-whatsapp-btn'),
+  adminQuickDrawBtn: document.getElementById('admin-quick-draw-btn'),
+  drawHistoryList: document.getElementById('draw-history-list'),
+  // Draw prize modal
+  drawPrizeModal: document.getElementById('draw-prize-modal'),
+  drawPrizeCancelBtn: document.getElementById('draw-prize-cancel-btn'),
+  drawPrizeValue: document.getElementById('draw-prize-value'),
+  drawPrizeConfirmBtn: document.getElementById('draw-prize-confirm-btn'),
+  // Draw raffle modal
+  drawRaffleModal: document.getElementById('draw-raffle-modal'),
+  drawRaffleModalClose: document.getElementById('draw-raffle-modal-close'),
+  drawModalImg: document.getElementById('draw-modal-img'),
+  drawModalRaffleList: document.getElementById('draw-modal-raffle-list'),
+  drawRaffleModalConfirm: document.getElementById('draw-raffle-modal-confirm')
 };
 
 const state = {
@@ -78,7 +108,12 @@ const state = {
   allSoldEntries: [],
   prizeNumbersDraft: [],
   autoDrawing: false,
-  tempImageUrl: ''
+  tempImageUrl: '',
+  drawMode: 'random',       // 'random' | 'buyers'
+  drawRaffleId: null,       // raffle selected in draw section
+  drawHistory: [],          // [{number, prizeValue, buyerName, buyerWhatsapp, date}]
+  drawSpinTimer: null,
+  drawModalRaffleId: null   // raffle id being chosen in modal
 };
 
 let unsubTickets = null;
@@ -576,6 +611,7 @@ async function subscribeCatalog() {
     renderForm();
     subscribeAllTickets();
     subscribeTickets();
+    renderDrawRaffleInfo();
   } catch (error) {
     console.error(error);
     state.raffles = DEFAULT_RAFFLES;
@@ -837,6 +873,295 @@ async function maybeAutoDrawIfComplete() {
   }
 }
 
+// ==================== DRAW SECTION ====================
+
+function getDrawRaffle() {
+  return state.raffles.find((r) => r.id === state.drawRaffleId) || state.raffles.find((r) => r.status === 'active') || state.raffles[0];
+}
+
+function renderDrawRaffleInfo() {
+  const raffle = getDrawRaffle();
+  if (!raffle) {
+    ui.drawRaffleName.textContent = 'Nenhuma rifa disponível';
+    ui.drawRafflePct.textContent = 'Progresso: 0%';
+    ui.drawProgressFill.style.width = '0%';
+    ui.drawRaffleImg.classList.add('hidden');
+    return;
+  }
+
+  state.drawRaffleId = raffle.id;
+
+  ui.drawRaffleName.textContent = raffle.prizeName || raffle.title || 'Rifa';
+  ui.drawRaffleImg.classList.toggle('hidden', !raffle.imageUrl);
+  if (raffle.imageUrl) {
+    ui.drawRaffleImg.src = raffle.imageUrl;
+  }
+
+  // Count sold tickets for this raffle
+  const soldCount = Object.entries(state.soldTickets).filter(() => raffle.id === state.selectedRaffleId).length;
+  const usedSold = raffle.id === state.selectedRaffleId ? Object.keys(state.soldTickets).length : 0;
+  const total = Number(raffle.totalQuotas || 0);
+  const pct = total > 0 ? Math.min((usedSold / total) * 100, 100) : 0;
+  ui.drawRafflePct.textContent = `Progresso: ${pct.toFixed(1).replace('.', ',')}%`;
+  ui.drawProgressFill.style.width = `${pct}%`;
+}
+
+function openDrawPrizeModal() {
+  ui.drawPrizeValue.value = '';
+  ui.drawPrizeModal.classList.remove('hidden');
+  ui.drawPrizeValue.focus();
+}
+
+function closeDrawPrizeModal() {
+  ui.drawPrizeModal.classList.add('hidden');
+}
+
+function openDrawRaffleModal() {
+  const activeRaffles = state.raffles.filter((r) => r.status === 'active');
+  const all = activeRaffles.length ? activeRaffles : state.raffles;
+  const selected = all.find((r) => r.id === (state.drawRaffleId || state.selectedRaffleId)) || all[0];
+  state.drawModalRaffleId = selected?.id || null;
+
+  // Update image
+  if (selected?.imageUrl) {
+    ui.drawModalImg.src = selected.imageUrl;
+    ui.drawModalImg.classList.remove('hidden');
+  } else {
+    ui.drawModalImg.classList.add('hidden');
+  }
+
+  // Render list
+  ui.drawModalRaffleList.innerHTML = all
+    .map((r) => {
+      const activeClass = r.id === state.drawModalRaffleId ? 'active' : '';
+      return `
+        <button type="button" class="draw-modal-raffle-btn ${activeClass}" data-draw-modal-raffle-id="${r.id}">
+          <strong>${r.prizeName || r.title}</strong>
+          <span style="color:var(--muted);font-size:0.72rem;"> — R$ ${r.price?.toFixed(2).replace('.', ',')} por cota</span>
+        </button>`;
+    })
+    .join('');
+
+  [...ui.drawModalRaffleList.querySelectorAll('.draw-modal-raffle-btn')].forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.drawModalRaffleId = btn.dataset.drawModalRaffleId;
+      const picked = state.raffles.find((r) => r.id === state.drawModalRaffleId);
+      if (picked?.imageUrl) {
+        ui.drawModalImg.src = picked.imageUrl;
+        ui.drawModalImg.classList.remove('hidden');
+      } else {
+        ui.drawModalImg.classList.add('hidden');
+      }
+      [...ui.drawModalRaffleList.querySelectorAll('.draw-modal-raffle-btn')].forEach((b) => {
+        b.classList.toggle('active', b.dataset.drawModalRaffleId === state.drawModalRaffleId);
+      });
+    });
+  });
+
+  ui.drawRaffleModal.classList.remove('hidden');
+}
+
+function closeDrawRaffleModal() {
+  ui.drawRaffleModal.classList.add('hidden');
+}
+
+function confirmDrawRaffleModal() {
+  if (state.drawModalRaffleId) {
+    state.drawRaffleId = state.drawModalRaffleId;
+    // Sync selected raffle to also update soldTickets view
+    state.selectedRaffleId = state.drawRaffleId;
+    subscribeTickets();
+  }
+  closeDrawRaffleModal();
+  renderDrawRaffleInfo();
+}
+
+async function onAdminQuickDraw() {
+  const raffle = getDrawRaffle();
+  if (!raffle) {
+    showToast('Nenhuma rifa disponível para sortear.');
+    return;
+  }
+
+  if (state.drawMode === 'buyers') {
+    const soldEntries = Object.entries(state.soldTickets);
+    if (!soldEntries.length) {
+      showToast('Nenhuma cota comprada nesta rifa para sortear.');
+      return;
+    }
+  }
+
+  openDrawPrizeModal();
+}
+
+async function startQuickDraw(prizeValue) {
+  const raffle = getDrawRaffle();
+  if (!raffle) return;
+
+  ui.adminQuickDrawBtn.disabled = true;
+  ui.drawWinnerPanel.classList.add('hidden');
+  ui.drawScreen.classList.remove('hidden');
+  ui.drawSpinningNumber.classList.add('spinning');
+  ui.drawStatusText.textContent = 'Sorteando...';
+
+  const totalQuotas = Number(raffle.totalQuotas || 100);
+
+  // Determine pool of numbers
+  let pool;
+  if (state.drawMode === 'buyers') {
+    pool = Object.keys(state.soldTickets);
+  } else {
+    pool = Array.from({ length: totalQuotas }, (_, i) => String(i).padStart(3, '0'));
+  }
+
+  if (!pool.length) {
+    showToast('Nenhum número disponível para sorteio.');
+    ui.adminQuickDrawBtn.disabled = false;
+    ui.drawSpinningNumber.classList.remove('spinning');
+    return;
+  }
+
+  // Animation: cycle through random numbers for ~2.5s
+  const duration = 2500;
+  const start = Date.now();
+
+  await new Promise((resolve) => {
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      const randomIdx = Math.floor(Math.random() * pool.length);
+      ui.drawSpinningNumber.textContent = pool[randomIdx];
+
+      if (elapsed < duration) {
+        const interval = Math.min(40 + (elapsed / duration) * 160, 200);
+        setTimeout(tick, interval);
+      } else {
+        resolve();
+      }
+    };
+    tick();
+  });
+
+  // Final pick
+  const finalIdx = Math.floor(Math.random() * pool.length);
+  const winnerNumber = pool[finalIdx];
+  ui.drawSpinningNumber.classList.remove('spinning');
+  ui.drawSpinningNumber.textContent = winnerNumber;
+
+  // Get ticket info if this number was purchased
+  const ticket = state.soldTickets[winnerNumber];
+
+  // Show winner panel
+  setTimeout(() => {
+    ui.drawScreen.classList.add('hidden');
+    ui.drawWinnerPanel.classList.remove('hidden');
+    ui.drawWinnerLabel.textContent = `🏆 Ganhador! Cota ${winnerNumber}`;
+    ui.drawWinnerNameText.textContent = ticket
+      ? `${ticket.buyerName || 'Comprador'}${ticket.buyerEmail ? ` — ${ticket.buyerEmail}` : ''}`
+      : 'Número não comprado';
+    ui.drawWinnerNumberText.textContent = `Cota ${winnerNumber}`;
+
+    const buyerPhone = ticket?.buyerWhatsapp || ticket?.buyerCpf || '';
+    const prizeLabel = prizeValue > 0 ? `R$ ${Number(prizeValue).toFixed(2).replace('.', ',')}` : 'prêmio';
+
+    if (ticket && buyerPhone) {
+      const msg = `Parabéns, você ganhou ${prizeLabel}! Mande sua chave Pix para receber. 🎉`;
+      const phone = String(buyerPhone).replace(/\D/g, '');
+      const waUrl = `https://wa.me/${phone.startsWith('55') ? phone : `55${phone}`}?text=${encodeURIComponent(msg)}`;
+      ui.drawWhatsappBtn.classList.remove('hidden');
+      ui.drawWhatsappBtn.onclick = () => window.open(waUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      ui.drawWhatsappBtn.classList.add('hidden');
+    }
+
+    // Add to draw history
+    state.drawHistory.unshift({
+      number: winnerNumber,
+      prizeValue,
+      buyerName: ticket?.buyerName || (ticket ? 'Comprador' : null),
+      date: new Date().toLocaleTimeString('pt-BR')
+    });
+    renderDrawHistory();
+
+    // Save quick draw winner to raffle catalog so client can show gift icon
+    const quickDrawWinners = Array.isArray(raffle.quickDrawWinners) ? [...raffle.quickDrawWinners] : [];
+    const alreadyExists = quickDrawWinners.some((w) => w.number === winnerNumber);
+    if (!alreadyExists) {
+      quickDrawWinners.push({ number: winnerNumber, prizeValue, date: new Date().toISOString() });
+      const updatedRaffles = state.raffles.map((r) =>
+        r.id === raffle.id ? { ...r, quickDrawWinners } : r
+      );
+      persistCatalog(updatedRaffles).catch(console.error);
+    }
+
+    ui.adminQuickDrawBtn.disabled = false;
+    ui.drawStatusText.textContent = 'Sorteio concluído';
+  }, 300);
+}
+
+function renderDrawHistory() {
+  if (!state.drawHistory.length) {
+    ui.drawHistoryList.innerHTML = '<p class="muted">Nenhum sorteio realizado nesta sessão.</p>';
+    return;
+  }
+
+  ui.drawHistoryList.innerHTML = state.drawHistory
+    .map((item) => `
+      <div class="draw-history-item">
+        <span class="draw-h-number">${item.number}</span>
+        <span class="draw-h-prize">R$ ${Number(item.prizeValue || 0).toFixed(2).replace('.', ',')}</span>
+        ${item.buyerName ? `<span class="draw-h-buyer">${item.buyerName}</span>` : '<span class="draw-h-buyer muted">Sem comprador</span>'}
+        <span class="draw-h-time">${item.date}</span>
+      </div>
+    `)
+    .join('');
+}
+
+function initDrawSection() {
+  // Mode toggle
+  ui.drawModeBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.drawMode = btn.dataset.mode;
+      ui.drawModeBtns.forEach((b) => b.classList.toggle('active', b.dataset.mode === state.drawMode));
+    });
+  });
+
+  // Change raffle button
+  ui.drawChangeRaffleBtn.addEventListener('click', openDrawRaffleModal);
+
+  // Raffle modal
+  ui.drawRaffleModalClose.addEventListener('click', closeDrawRaffleModal);
+  ui.drawRaffleModalConfirm.addEventListener('click', confirmDrawRaffleModal);
+  ui.drawRaffleModal.addEventListener('click', (e) => {
+    if (e.target === ui.drawRaffleModal) closeDrawRaffleModal();
+  });
+
+  // Prize modal
+  ui.drawPrizeCancelBtn.addEventListener('click', closeDrawPrizeModal);
+  ui.drawPrizeModal.addEventListener('click', (e) => {
+    if (e.target === ui.drawPrizeModal) closeDrawPrizeModal();
+  });
+  ui.drawPrizeConfirmBtn.addEventListener('click', () => {
+    const val = parseFloat(ui.drawPrizeValue.value || '0');
+    if (val < 0 || isNaN(val)) {
+      showToast('Informe um valor válido para o prêmio.');
+      return;
+    }
+    closeDrawPrizeModal();
+    startQuickDraw(val).catch((err) => {
+      console.error(err);
+      showToast(err?.message || 'Erro ao sortear.');
+      ui.adminQuickDrawBtn.disabled = false;
+    });
+  });
+
+  // Main draw button
+  ui.adminQuickDrawBtn.addEventListener('click', onAdminQuickDraw);
+
+  renderDrawRaffleInfo();
+}
+
+// ==================== END DRAW SECTION ====================
+
 async function init() {
   ui.loginForm.addEventListener('submit', onAdminLogin);
   ui.togglePassword.addEventListener('click', () => {
@@ -912,11 +1237,13 @@ async function init() {
     await subscribeCatalog();
     subscribeSiteConfig();
     showAdminSection('section-config');
+    initDrawSection();
   } catch (error) {
     console.error(error);
     await subscribeCatalog();
     showToast('Falha de autenticacao. Catalogo remoto continua disponivel.');
     showAdminSection('section-config');
+    initDrawSection();
   }
 
   ui.siteConfigForm.addEventListener('submit', onSaveSiteConfig);

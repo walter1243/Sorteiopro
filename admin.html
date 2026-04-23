@@ -50,7 +50,7 @@
             <div class="admin-menu-list">
               <button class="admin-menu-link" data-target="section-config" type="button">Configuracao da rifa</button>
               <button class="admin-menu-link" data-target="section-buyers" type="button">Compradores e sorteio</button>
-              <button class="admin-menu-link" data-target="section-site" type="button">Configurações do site</button>
+              <button class="admin-menu-link" data-target="section-site" type="button">Realizar Sorteio</button>
             </div>
             <div class="admin-menu-footer">
               <button id="logout-btn" class="ghost admin-logout-btn">Sair do painel</button>
@@ -190,14 +190,76 @@
             <p id="winner-box" class="winner muted"></p>
 
                     <section class="panel admin-card admin-section hidden" id="section-site">
-                      <h3>Configurações do Site</h3>
-                      <form id="site-config-form">
-                        <label>WhatsApp do dono (com DDI, ex: 5563999999999)
-                          <input id="site-whatsapp" placeholder="Ex: 5563991133386" inputmode="numeric" />
-                        </label>
-                        <button type="submit">Salvar Configurações do Site</button>
-                      </form>
-                      <p class="muted">Este número aparece no botão flutuante de WhatsApp na página do cliente.</p>
+                      <h3>Realizar Sorteio</h3>
+
+                      <!-- Raffle info card (same style as client) -->
+                      <div class="draw-raffle-info" id="draw-raffle-info">
+                        <div class="draw-raffle-card-row">
+                          <img id="draw-raffle-img" class="draw-raffle-img hidden" alt="Rifa" />
+                          <div class="draw-raffle-text">
+                            <strong id="draw-raffle-name">Nenhuma rifa</strong>
+                            <p class="muted" id="draw-raffle-pct">Progresso: 0%</p>
+                          </div>
+                          <button id="draw-change-raffle-btn" type="button" class="ghost draw-change-btn">Trocar Rifa</button>
+                        </div>
+                        <div class="draw-progress-track">
+                          <span id="draw-progress-fill" class="draw-progress-fill" style="width:0%"></span>
+                        </div>
+                      </div>
+
+                      <!-- Draw mode toggle -->
+                      <div class="draw-mode-row">
+                        <button type="button" id="draw-mode-random" class="draw-mode-btn active" data-mode="random">
+                          <span class="draw-mode-icon">🎲</span>
+                          <strong>Sorteio Aleatório</strong>
+                          <small>Qualquer número da rifa</small>
+                        </button>
+                        <button type="button" id="draw-mode-buyers" class="draw-mode-btn" data-mode="buyers">
+                          <span class="draw-mode-icon">👥</span>
+                          <strong>Sortear Compradores</strong>
+                          <small>Somente cotas compradas</small>
+                        </button>
+                      </div>
+
+                      <!-- Animation display -->
+                      <div class="draw-display" id="draw-display">
+                        <div class="draw-screen" id="draw-screen">
+                          <div class="draw-spinning-number" id="draw-spinning-number">000</div>
+                          <p class="muted draw-status-text" id="draw-status-text">Pronto para sortear</p>
+                        </div>
+                        <div class="draw-winner-panel hidden" id="draw-winner-panel">
+                          <div class="draw-winner-trophy">🏆</div>
+                          <h4 id="draw-winner-label">Ganhador!</h4>
+                          <p id="draw-winner-name-text" class="muted">-</p>
+                          <p id="draw-winner-number-text" class="draw-winner-number">Cota 000</p>
+                          <button id="draw-whatsapp-btn" type="button" class="draw-whatsapp-btn hidden">
+                            📱 Abrir WhatsApp do Ganhador
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Main draw button -->
+                      <button id="admin-quick-draw-btn" type="button" class="draw-start-btn">🎯 Sortear Agora</button>
+
+                      <!-- Draw history -->
+                      <div class="draw-history-box">
+                        <h4>Histórico de Sorteios Rápidos</h4>
+                        <div id="draw-history-list" class="draw-history-list">
+                          <p class="muted">Nenhum sorteio realizado nesta sessão.</p>
+                        </div>
+                      </div>
+
+                      <!-- Site config (kept for WhatsApp float btn) -->
+                      <details class="draw-site-config">
+                        <summary>⚙️ Configurações do Site</summary>
+                        <form id="site-config-form" style="margin-top:12px;">
+                          <label>WhatsApp do dono (com DDI, ex: 5563999999999)
+                            <input id="site-whatsapp" placeholder="Ex: 5563991133386" inputmode="numeric" />
+                          </label>
+                          <button type="submit" style="margin-top:8px;">Salvar WhatsApp</button>
+                        </form>
+                        <p class="muted">Este número aparece no botão flutuante de WhatsApp na página do cliente.</p>
+                      </details>
                     </section>
           </section>
         </section>
@@ -223,6 +285,35 @@
   </div>
 
   <div id="toast" class="toast"></div>
+
+  <!-- Draw prize value modal -->
+  <div id="draw-prize-modal" class="overlay hidden">
+    <div class="modal panel draw-prize-modal-box">
+      <div class="panel-head">
+        <h3>Configurar Sorteio</h3>
+        <button id="draw-prize-cancel-btn" type="button" class="ghost close-x-btn" aria-label="Fechar">X</button>
+      </div>
+      <p class="muted">Informe o valor do prêmio para este sorteio.</p>
+      <label style="margin-top:10px;">Valor do prêmio (R$)
+        <input id="draw-prize-value" type="number" step="0.01" min="0" placeholder="Ex: 100.00" />
+      </label>
+      <button id="draw-prize-confirm-btn" type="button" style="margin-top:14px;">🎯 Iniciar Sorteio</button>
+    </div>
+  </div>
+
+  <!-- Draw raffle selection modal -->
+  <div id="draw-raffle-modal" class="overlay hidden">
+    <div class="modal panel draw-prize-modal-box">
+      <div class="panel-head">
+        <h3>Selecionar Rifa</h3>
+        <button id="draw-raffle-modal-close" type="button" class="ghost close-x-btn" aria-label="Fechar">X</button>
+      </div>
+      <img id="draw-modal-img" src="" alt="Imagem da rifa" class="hidden" style="width:100%;max-height:160px;object-fit:cover;border-radius:12px;margin:8px 0;" />
+      <div id="draw-modal-raffle-list" class="draw-modal-raffle-list"></div>
+      <button id="draw-raffle-modal-confirm" type="button" style="margin-top:14px;">Confirmar Rifa</button>
+    </div>
+  </div>
+
   <script type="module" src="assets/js/admin.js"></script>
 </body>
 </html>
