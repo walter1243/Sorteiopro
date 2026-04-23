@@ -102,6 +102,8 @@
   border-radius: 8px;
   margin: 5px 0;
   border: 1px solid #2f3d56;
+  display: block;
+  visibility: visible;
 }
 
 .raffle-card strong {
@@ -537,6 +539,8 @@ button:disabled {
   border: 1px solid #2f425e;
   background: #0a1220;
   margin: 10px 0 14px;
+  display: block;
+  visibility: visible;
 }
 
 .selection-area h3 {
@@ -716,6 +720,8 @@ button:disabled {
   #raffle-cards .card-image {
     height: 148px;
     object-fit: cover;
+    display: block;
+    width: 100%;
   }
 
   .ticket-list {
@@ -734,6 +740,8 @@ button:disabled {
     max-height: none;
     height: 200px;
     object-fit: cover;
+    display: block;
+    width: 100%;
   }
 
   .modal-raffles-list {
@@ -806,6 +814,9 @@ button:disabled {
 
   #raffle-cards .card-image {
     height: 120px;
+    object-fit: cover;
+    width: 100%;
+    display: block;
   }
 
   .raffle-card strong {
@@ -894,6 +905,9 @@ button:disabled {
   .modal-main-image {
     height: 150px;
     margin: 8px 0 12px;
+    width: 100%;
+    display: block;
+    object-fit: cover;
   }
 
   .modal-raffles-list .modal-raffle-btn {
