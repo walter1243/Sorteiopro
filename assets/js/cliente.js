@@ -255,7 +255,7 @@ function renderRaffleCards() {
       return `
         <button class="raffle-card ${activeClass}" data-id="${raffle.id}">
           <p class="status">${statusLabel(raffle.status)}</p>
-          ${raffle.imageUrl ? `<img src="${raffle.imageUrl}" alt="Premio" class="card-image" />` : ''}
+          ${raffle.imageUrl ? `<img src="${raffle.imageUrl}" alt="Premio" class="card-image" crossorigin="anonymous" loading="lazy" decoding="async" />` : ''}
           <strong>${raffle.prizeName || raffle.title}</strong>
           <p>R$ ${formatCurrency(raffle.price)} por cota</p>
           ${hasReturnBtn ? '<span class="raffle-card-action">Escolher outra rifa</span>' : ''}
@@ -292,6 +292,7 @@ function renderRaffleSelectionModal() {
   ui.raffleModalPrice.textContent = `R$ ${formatCurrency(selected.price)} por cota`;
 
   if (selected.imageUrl) {
+    ui.raffleModalImage.crossOrigin = 'anonymous';
     ui.raffleModalImage.src = selected.imageUrl;
     ui.raffleModalImage.classList.remove('hidden');
   } else {
