@@ -955,7 +955,8 @@ function renderQuotaGrid() {
   ensureQuotaViewportState(product);
 
   const quickWinners = new Set(
-    (Array.isArray(product.quickDrawWinners) ? product.quickDrawWinners : []).map((w) => w.number)
+    (Array.isArray(product.quickDrawWinners) ? product.quickDrawWinners : [])
+      .map((w) => normalizeQuotaNumber(w?.number))
   );
 
   const totalQuotas = Number(product.totalQuotas || 0);
@@ -1075,7 +1076,7 @@ function renderHeader() {
     const quickWinners = Array.isArray(product.quickDrawWinners) ? product.quickDrawWinners : [];
     if (quickWinners.length) {
       const last = quickWinners[quickWinners.length - 1];
-      ui.winnerAlert.innerHTML = `🎁 Cota premiada: <strong>${last.number}</strong>${last.prizeValue ? ` — R$ ${Number(last.prizeValue).toFixed(2).replace('.', ',')}` : ''}`;
+      ui.winnerAlert.innerHTML = `🎁 Cota premiada: <strong>${normalizeQuotaNumber(last.number)}</strong>${last.prizeValue ? ` — R$ ${Number(last.prizeValue).toFixed(2).replace('.', ',')}` : ''}`;
       ui.winnerAlert.classList.remove('hidden');
     } else {
       ui.winnerAlert.textContent = '';

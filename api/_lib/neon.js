@@ -445,6 +445,20 @@ export async function listCatalogRaffles() {
     .map((row) => {
     const raw = row.raw_payload && typeof row.raw_payload === 'object' ? row.raw_payload : {};
     const prizeNumbers = Array.isArray(raw.prizeNumbers) ? raw.prizeNumbers : [];
+    const quickDrawWinners = Array.isArray(raw.quickDrawWinners)
+      ? raw.quickDrawWinners
+          .map((item) => {
+            const number = String(item?.number ?? '').replace(/\D/g, '').slice(-3).padStart(3, '0');
+            if (!number) {
+              return null;
+            }
+            return {
+              ...item,
+              number
+            };
+          })
+          .filter(Boolean)
+      : [];
     return {
       id: raw.id || row.id,
       title: raw.title || raw.prizeName || row.title || 'Rifa',
@@ -456,7 +470,8 @@ export async function listCatalogRaffles() {
       winner: raw.winner || null,
       drawMethod: raw.drawMethod || 'random_internal',
       prizeNumbers,
-      prizeWhatsapp: raw.prizeWhatsapp || ''
+      prizeWhatsapp: raw.prizeWhatsapp || '',
+      quickDrawWinners
     };
   });
 }

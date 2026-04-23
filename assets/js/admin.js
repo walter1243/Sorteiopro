@@ -74,7 +74,6 @@ const ui = {
   drawRafflePct: document.getElementById('draw-raffle-pct'),
   drawProgressFill: document.getElementById('draw-progress-fill'),
   drawChangeRaffleBtn: document.getElementById('draw-change-raffle-btn'),
-  drawModeBtns: [...document.querySelectorAll('.draw-mode-btn')],
   drawCardDisplay: document.getElementById('draw-card-display'),
   drawScreen: document.getElementById('draw-screen'),
   drawSpinningNumber: document.getElementById('draw-spinning-number'),
@@ -117,7 +116,6 @@ const state = {
   prizeNumbersDraft: [],
   autoDrawing: false,
   tempImageUrl: '',
-  drawMode: 'random',       // 'random' | 'buyers'
   drawRaffleId: null,       // raffle selected in draw section
   drawHistory: [],          // [{number, prizeValue, buyerName, buyerWhatsapp, date}]
   drawSpinTimer: null,
@@ -1082,12 +1080,10 @@ async function onAdminQuickDraw() {
     return;
   }
 
-  if (state.drawMode === 'buyers') {
-    const soldEntries = Object.entries(state.soldTickets);
-    if (!soldEntries.length) {
-      showToast('Nenhuma cota comprada nesta rifa para sortear.');
-      return;
-    }
+  const soldEntries = Object.entries(state.soldTickets);
+  if (!soldEntries.length) {
+    showToast('Nenhuma cota comprada nesta rifa para sortear.');
+    return;
   }
 
   openDrawPrizeModal();
@@ -1104,15 +1100,8 @@ async function startQuickDraw(prizeValue) {
   if (ui.drawStatusDot) { ui.drawStatusDot.classList.add('spinning'); }
   if (ui.drawStatusLabel) { ui.drawStatusLabel.textContent = 'Sorteando...'; }
 
-  const totalQuotas = Number(raffle.totalQuotas || 100);
-
-  // Determine pool of numbers
-  let pool;
-  if (state.drawMode === 'buyers') {
-    pool = Object.keys(state.soldTickets);
-  } else {
-    pool = Array.from({ length: totalQuotas }, (_, i) => String(i).padStart(3, '0'));
-  }
+  // Fixed rule: draw only from purchased numbers.
+  const pool = Object.keys(state.soldTickets);
 
   if (!pool.length) {
     showToast('Nenhum número disponível para sorteio.');
@@ -1221,14 +1210,6 @@ function renderDrawHistory() {
 }
 
 function initDrawSection() {
-  // Mode toggle
-  ui.drawModeBtns.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      state.drawMode = btn.dataset.mode || 'random';
-      ui.drawModeBtns.forEach((b) => b.classList.toggle('active', b.dataset.mode === state.drawMode));
-    });
-  });
-
   // Change raffle button
   ui.drawChangeRaffleBtn.addEventListener('click', openDrawRaffleModal);
 
