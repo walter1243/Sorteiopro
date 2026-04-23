@@ -220,32 +220,9 @@ function onSendPrizeClaim() {
 function persistPendingPrizeClaims() {}
 
 function renderInstantPrizeAlert(product) {
-  if (!state.hasPickedRaffle || !product) {
-    ui.instantPrizeAlert.classList.add('hidden');
-    ui.instantPrizeAlert.textContent = '';
-    return;
-  }
-
-  const prizeMap = getPrizeMap(product);
-  const hits = state.selectedNumbers
-    .filter((number) => prizeMap.has(number))
-    .map((number) => ({ number, value: prizeMap.get(number) }));
-
-  if (!hits.length) {
-    ui.instantPrizeAlert.classList.add('hidden');
-    ui.instantPrizeAlert.textContent = '';
-    return;
-  }
-
-  if (hits.length === 1) {
-    const prize = hits[0];
-    ui.instantPrizeAlert.textContent = `Parabens! A cota ${prize.number} e premiada com R$ ${formatCurrency(prize.value)}.`;
-  } else {
-    const summary = hits.map((item) => `${item.number} (R$ ${formatCurrency(item.value)})`).join(' | ');
-    ui.instantPrizeAlert.textContent = `Parabens! Voce selecionou cotas premiadas: ${summary}.`;
-  }
-
-  ui.instantPrizeAlert.classList.remove('hidden');
+  // Nao revela cotas premiadas antes da compra ser aprovada.
+  ui.instantPrizeAlert.classList.add('hidden');
+  ui.instantPrizeAlert.textContent = '';
 }
 
 function hasVisibleWinner(winner) {
@@ -900,11 +877,10 @@ function renderQuotaGrid() {
     const number = normalizeQuotaNumber(i);
     const sold = !!state.soldTickets[number];
     const selected = state.selectedNumbers.includes(number);
-    const isPrizeNumber = getPrizeMap(product).has(number);
 
     const button = document.createElement('button');
-    button.innerHTML = `${number}${isPrizeNumber ? '<span class="gift-mark" aria-hidden="true">🎁</span>' : ''}`;
-    button.className = `quota ${sold ? 'sold' : ''} ${selected ? 'selected' : ''} ${isPrizeNumber ? 'prized' : ''}`.trim();
+    button.textContent = number;
+    button.className = `quota ${sold ? 'sold' : ''} ${selected ? 'selected' : ''}`.trim();
 
     button.addEventListener('click', () => {
       if (sold || product.status !== 'active') {
