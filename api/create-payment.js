@@ -34,7 +34,7 @@ function buildFallbackEmail({ phoneDigits, externalReference }) {
   const safePhone = String(phoneDigits || '').replace(/\D/g, '').slice(-11);
   const safeRef = String(externalReference || '').replace(/[^a-zA-Z0-9]/g, '').slice(-20);
   const token = safePhone || safeRef || Date.now().toString();
-  return `cliente+${token}@sorteiopro.local`;
+  return `cliente+${token}@example.com`;
 }
 
 export default async function handler(req, res) {
