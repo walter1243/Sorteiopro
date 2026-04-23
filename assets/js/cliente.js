@@ -130,6 +130,21 @@ function getActiveRaffles() {
   return state.raffles.filter((raffle) => raffle.status === 'active');
 }
 
+function getPreferredActiveRaffle() {
+  const activeRaffles = getActiveRaffles();
+  if (!activeRaffles.length) {
+    return null;
+  }
+
+  const selected = activeRaffles.find((item) => item.id === state.selectedRaffleId);
+  if (selected) {
+    return selected;
+  }
+
+  const withImage = activeRaffles.find((item) => String(item.imageUrl || '').trim());
+  return withImage || activeRaffles[0];
+}
+
 function getPrizeMap(product) {
   const entries = Array.isArray(product?.prizeNumbers) ? product.prizeNumbers : [];
   return new Map(entries.map((item) => [String(item.number || '').padStart(3, '0').slice(-3), Number(item.value || 0)]));
@@ -241,29 +256,24 @@ function hasVisibleWinner(winner) {
 }
 
 function renderRaffleCards() {
-  const current = getProduct();
-  const activeRaffles = getActiveRaffles();
+  const raffle = getPreferredActiveRaffle();
 
-  if (!activeRaffles.length) {
+  if (!raffle) {
     ui.raffleCards.innerHTML = '<p class="muted">Nenhuma rifa ativa no momento.</p>';
     return;
   }
 
-  ui.raffleCards.innerHTML = activeRaffles
-    .map((raffle) => {
-      const activeClass = state.hasPickedRaffle && raffle.id === current.id ? 'active' : '';
-      const hasReturnBtn = state.hasPickedRaffle && raffle.id === current.id;
-      return `
-        <button class="raffle-card ${activeClass}" data-id="${raffle.id}">
-          <p class="status">${statusLabel(raffle.status)}</p>
-          ${raffle.imageUrl ? `<img src="${raffle.imageUrl}" alt="Premio" class="card-image" crossorigin="anonymous" loading="lazy" decoding="async" />` : ''}
-          <strong>${raffle.prizeName || raffle.title}</strong>
-          <p>R$ ${formatCurrency(raffle.price)} por cota</p>
-          ${hasReturnBtn ? '<span class="raffle-card-action">Escolher outra rifa</span>' : ''}
-        </button>
-      `;
-    })
-    .join('');
+  state.selectedRaffleId = raffle.id;
+
+  ui.raffleCards.innerHTML = `
+    <button class="raffle-card active" data-id="${raffle.id}">
+      <p class="status">${statusLabel(raffle.status)}</p>
+      ${raffle.imageUrl ? `<img src="${raffle.imageUrl}" alt="Premio" class="card-image" crossorigin="anonymous" loading="lazy" decoding="async" />` : ''}
+      <strong>${raffle.prizeName || raffle.title}</strong>
+      <p>R$ ${formatCurrency(raffle.price)} por cota</p>
+      <span class="raffle-card-action">Trocar sorteio</span>
+    </button>
+  `;
 
   [...ui.raffleCards.querySelectorAll('button[data-id]')].forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -1085,23 +1095,15 @@ function renderTabs() {
 }
 
 function handleActiveRaffleFlow() {
-  const activeRaffles = getActiveRaffles();
+  const preferred = getPreferredActiveRaffle();
 
-  if (!activeRaffles.length) {
+  if (!preferred) {
     state.hasPickedRaffle = false;
     return;
   }
 
-  if (activeRaffles.length === 1) {
-    state.selectedRaffleId = activeRaffles[0].id;
-    state.hasPickedRaffle = true;
-    return;
-  }
-
-  if (!activeRaffles.some((item) => item.id === state.selectedRaffleId)) {
-    state.selectedRaffleId = activeRaffles[0].id;
-    state.hasPickedRaffle = false;
-  }
+  state.selectedRaffleId = preferred.id;
+  state.hasPickedRaffle = true;
 }
 
 function addLiveFeedMessage() {
