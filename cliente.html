@@ -48,7 +48,12 @@
         </div>
           <div id="instant-prize-alert" class="instant-prize-alert hidden"></div>
           <div id="winner-alert" class="winner-alert hidden"></div>
-        <p id="raffle-price" class="muted"></p>
+        <div class="raffle-progress-wrap" aria-live="polite">
+          <p id="raffle-price" class="muted raffle-progress-label">Progresso da rifa: 0,0%</p>
+          <div class="raffle-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progresso de vendas da rifa">
+            <span id="raffle-progress-fill" class="raffle-progress-fill" style="width: 0%;"></span>
+          </div>
+        </div>
         <div id="quota-grid" class="quota-grid"></div>
       </article>
 

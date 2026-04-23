@@ -64,7 +64,7 @@
   margin-top: 14px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .raffle-card {
@@ -72,8 +72,8 @@
   border: 1px solid #2f3d56;
   color: var(--text);
   text-align: left;
-  padding: 12px;
-  border-radius: 14px;
+  padding: 10px;
+  border-radius: 12px;
   cursor: pointer;
   transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
 }
@@ -97,11 +97,47 @@
 
 .card-image {
   width: 100%;
-  height: 110px;
+  height: 90px;
   object-fit: cover;
-  border-radius: 10px;
-  margin: 6px 0;
+  border-radius: 8px;
+  margin: 5px 0;
   border: 1px solid #2f3d56;
+}
+
+.raffle-card strong {
+  font-size: 1rem;
+}
+
+.raffle-card p {
+  margin: 4px 0;
+}
+
+.raffle-progress-wrap {
+  margin-top: 8px;
+}
+
+.raffle-progress-label {
+  margin: 0 0 6px;
+}
+
+.raffle-progress-track {
+  position: relative;
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  background: #0b1321;
+  border: 1px solid #29415c;
+  overflow: hidden;
+}
+
+.raffle-progress-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2bc46a 0%, #3fe081 55%, #7effae 100%);
+  box-shadow: 0 0 12px #2bc46a66;
+  transition: width 320ms ease;
 }
 
 .title-row {
@@ -614,6 +650,15 @@ button:disabled {
 
   .raffle-cards {
     grid-template-columns: 1fr;
+  }
+
+  #raffle-cards .raffle-card {
+    max-width: 420px;
+    margin-inline: auto;
+  }
+
+  #raffle-cards .card-image {
+    height: 74px;
   }
 
   .ticket-list {

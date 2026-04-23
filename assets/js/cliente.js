@@ -24,6 +24,8 @@ const ui = {
   raffleStatus: document.getElementById('raffle-status'),
   instantPrizeAlert: document.getElementById('instant-prize-alert'),
   rafflePrice: document.getElementById('raffle-price'),
+  raffleProgressFill: document.getElementById('raffle-progress-fill'),
+  raffleProgressTrack: document.querySelector('.raffle-progress-track'),
   winnerAlert: document.getElementById('winner-alert'),
   tabShop: document.getElementById('tab-shop'),
   tabMine: document.getElementById('tab-mine'),
@@ -958,7 +960,9 @@ function renderHeader() {
     ui.raffleStatus.textContent = '-';
     ui.instantPrizeAlert.classList.add('hidden');
     ui.instantPrizeAlert.textContent = '';
-    ui.rafflePrice.textContent = 'Selecione uma rifa na vitrine acima para visualizar as cotas.';
+    ui.rafflePrice.textContent = 'Progresso da rifa: 0,0%';
+    ui.raffleProgressFill.style.width = '0%';
+    ui.raffleProgressTrack.setAttribute('aria-valuenow', '0');
     ui.winnerAlert.textContent = '';
     ui.winnerAlert.classList.add('hidden');
     return;
@@ -969,15 +973,14 @@ function renderHeader() {
   const sold = Object.keys(state.soldTickets).length;
   const total = Number(product.totalQuotas || 0);
   const percent = total > 0 ? (sold / total) * 100 : 0;
-  ui.rafflePrice.textContent = `Vendas da rifa: ${percent.toFixed(1).replace('.', ',')}%`;
+  const percentLabel = percent.toFixed(1).replace('.', ',');
+  const percentClamped = Math.max(0, Math.min(100, percent));
+  ui.rafflePrice.textContent = `Progresso da rifa: ${percentLabel}%`;
+  ui.raffleProgressFill.style.width = `${percentClamped}%`;
+  ui.raffleProgressTrack.setAttribute('aria-valuenow', String(percentClamped.toFixed(1)));
 
-  if (product.imageUrl) {
-    ui.raffleTitleImage.src = product.imageUrl;
-    ui.raffleTitleImage.classList.remove('hidden');
-  } else {
-    ui.raffleTitleImage.classList.add('hidden');
-    ui.raffleTitleImage.src = '';
-  }
+  ui.raffleTitleImage.classList.add('hidden');
+  ui.raffleTitleImage.src = '';
 
   if (hasVisibleWinner(product.winner)) {
     const mine = state.myTickets.find(
