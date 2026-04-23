@@ -152,6 +152,15 @@ function getPreferredActiveRaffle() {
   return withImage || selected || activeRaffles[0];
 }
 
+function getSelectedActiveRaffle() {
+  const selected = getRaffleById(state.selectedRaffleId);
+  if (selected && selected.status === 'active') {
+    return selected;
+  }
+
+  return null;
+}
+
 function getPrizeMap(product) {
   const entries = Array.isArray(product?.prizeNumbers) ? product.prizeNumbers : [];
   return new Map(entries.map((item) => [String(item.number || '').padStart(3, '0').slice(-3), Number(item.value || 0)]));
@@ -314,14 +323,12 @@ function hasVisibleWinner(winner) {
 }
 
 function renderRaffleCards() {
-  const raffle = getPreferredActiveRaffle();
+  const raffle = getSelectedActiveRaffle() || getPreferredActiveRaffle();
 
   if (!raffle) {
     ui.raffleCards.innerHTML = '<p class="muted">Nenhuma rifa ativa no momento.</p>';
     return;
   }
-
-  state.selectedRaffleId = raffle.id;
 
   ui.raffleCards.innerHTML = `
     <button class="raffle-card active" data-id="${raffle.id}">
@@ -423,6 +430,7 @@ function confirmRaffleSelectionFromModal() {
 
   state.selectedRaffleId = raffle.id;
   state.selectedNumbers = [];
+  state.soldTickets = {};
   state.hasPickedRaffle = true;
   state.quotaLastRaffleId = null;
   closeRaffleSelectionModal();
@@ -1182,8 +1190,13 @@ function renderTabs() {
 }
 
 function handleActiveRaffleFlow() {
-  const preferred = getPreferredActiveRaffle();
+  const selected = getSelectedActiveRaffle();
+  if (selected) {
+    state.hasPickedRaffle = true;
+    return;
+  }
 
+  const preferred = getPreferredActiveRaffle();
   if (!preferred) {
     state.hasPickedRaffle = false;
     return;
@@ -1283,6 +1296,8 @@ function subscribeTickets() {
   }
 
   const product = getProduct();
+  state.soldTickets = {};
+  render();
   const ticketsRef = collection(db, 'artifacts', appId, 'public', 'data', `tickets_${product.id}`);
 
   unsubTickets = onSnapshot(ticketsRef, (snap) => {
