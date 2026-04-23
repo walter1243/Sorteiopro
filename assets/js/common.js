@@ -17,7 +17,7 @@ export const DEFAULT_RAFFLES = [
     totalValue: 50000,
     price: 50,
     totalQuotas: 1000,
-    imageUrl: '',
+    imageUrl: 'https://images.pexels.com/photos/3802517/pexels-photo-3802517.jpeg?w=400&h=300&fit=crop',
     status: 'active',
     drawMethod: 'random_internal',
     winner: null
@@ -30,7 +30,7 @@ export const DEFAULT_RAFFLES = [
     totalValue: 28000,
     price: 35,
     totalQuotas: 800,
-    imageUrl: '',
+    imageUrl: 'https://images.pexels.com/photos/2103284/pexels-photo-2103284.jpeg?w=400&h=300&fit=crop',
     status: 'paused',
     drawMethod: 'random_internal',
     winner: null
