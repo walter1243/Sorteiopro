@@ -787,10 +787,8 @@ async function processPixPayment() {
     }
 
     if (payment.status === 'approved') {
-      await saveApprovedTickets(checkoutContext);
-      await applyPrizeClaimFlow(checkoutContext);
-      state.selectedNumbers = [];
-      showSuccessMessage('PIX aprovado! Suas cotas foram compradas.');
+      await finalizeApprovedPurchase(checkoutContext);
+      return;
     } else {
       throw new Error(`Status inesperado: ${payment.status}`);
     }
@@ -899,6 +897,29 @@ async function applyPrizeClaimFlow(checkoutContext) {
   openPrizeClaimModal(state.pendingPrizeClaims[0]);
 }
 
+async function finalizeApprovedPurchase(checkoutContext) {
+  if (!checkoutContext || checkoutContext.uiFinalized) {
+    return;
+  }
+
+  checkoutContext.uiFinalized = true;
+  state.selectedNumbers = [];
+
+  // Fecha primeiro para impedir que a interface fique parada no QR Code.
+  await closePaymentModal();
+
+  try {
+    await saveApprovedTickets(checkoutContext);
+    render();
+    await applyPrizeClaimFlow(checkoutContext);
+    showToast('Obrigado! Sua cota foi comprada. Para verificar suas cotas, va em Minhas cotas.');
+  } catch (error) {
+    console.error('[finalizeApprovedPurchase] Falha apos aprovacao:', error);
+    render();
+    showToast('Pagamento aprovado! Para verificar suas cotas, va em Minhas cotas.');
+  }
+}
+
 async function fetchPaymentStatus(paymentId) {
   const response = await fetch(`/api/payment-status?id=${encodeURIComponent(String(paymentId))}`);
   const data = await response.json();
@@ -925,12 +946,7 @@ function startPixStatusPolling(checkoutContext) {
         clearInterval(pixStatusPollTimer);
         pixStatusPollTimer = null;
 
-        await saveApprovedTickets(checkoutContext);
-        state.selectedNumbers = [];
-        await closePaymentModal();
-        render();
-        await applyPrizeClaimFlow(checkoutContext);
-        showToast('Obrigado! Sua cota foi comprada. Para verificar suas cotas, va em Minhas cotas.');
+        await finalizeApprovedPurchase(checkoutContext);
         return;
       }
 
