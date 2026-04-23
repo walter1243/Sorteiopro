@@ -136,6 +136,7 @@ export async function ensureBusinessSchema() {
       buyer_name TEXT,
       buyer_email TEXT,
       buyer_cpf TEXT,
+      buyer_phone TEXT,
       payment_method_id TEXT,
       payment_id TEXT,
       status TEXT NOT NULL,
@@ -165,6 +166,11 @@ export async function ensureBusinessSchema() {
   `;
 
   await sql`
+    ALTER TABLE pedidos
+    ADD COLUMN IF NOT EXISTS buyer_phone TEXT
+  `;
+
+  await sql`
     CREATE INDEX IF NOT EXISTS idx_pedidos_raffle_id
     ON pedidos (raffle_id)
   `;
@@ -172,6 +178,16 @@ export async function ensureBusinessSchema() {
   await sql`
     CREATE INDEX IF NOT EXISTS idx_pedidos_payment_id
     ON pedidos (payment_id)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_pedidos_buyer_cpf
+    ON pedidos (buyer_cpf)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS idx_pedidos_buyer_phone
+    ON pedidos (buyer_phone)
   `;
 
   await sql`
@@ -297,6 +313,7 @@ export async function createPedido(pedido) {
       buyer_name,
       buyer_email,
       buyer_cpf,
+      buyer_phone,
       payment_method_id,
       status,
       status_detail,
@@ -310,6 +327,7 @@ export async function createPedido(pedido) {
       ${pedido.buyerName || null},
       ${pedido.buyerEmail || null},
       ${pedido.buyerCpf || null},
+      ${pedido.buyerPhone || null},
       ${pedido.paymentMethodId || null},
       ${pedido.status || 'pending'},
       ${pedido.statusDetail || null},
@@ -324,6 +342,7 @@ export async function createPedido(pedido) {
       buyer_name = EXCLUDED.buyer_name,
       buyer_email = EXCLUDED.buyer_email,
       buyer_cpf = EXCLUDED.buyer_cpf,
+      buyer_phone = EXCLUDED.buyer_phone,
       payment_method_id = EXCLUDED.payment_method_id,
       status = EXCLUDED.status,
       status_detail = EXCLUDED.status_detail,
@@ -333,6 +352,45 @@ export async function createPedido(pedido) {
   `;
 
   return rows?.[0]?.id || null;
+}
+
+export async function listTicketsByDocument(documentDigits) {
+  const sql = requireSqlClient();
+  await ensureBusinessSchema();
+
+  const digits = String(documentDigits || '').replace(/\D/g, '');
+  if (!digits) {
+    return [];
+  }
+
+  const withCountryCode = digits.startsWith('55') ? digits : `55${digits}`;
+
+  const rows = await sql`
+    SELECT
+      p.external_reference,
+      p.raffle_id,
+      p.selected_numbers_csv,
+      p.status,
+      p.mp_status,
+      p.created_at,
+      r.title AS raffle_title
+    FROM pedidos p
+    LEFT JOIN rifas r ON r.id = p.raffle_id
+    WHERE
+      p.buyer_cpf = ${digits}
+      OR p.buyer_phone = ${digits}
+      OR p.buyer_phone = ${withCountryCode}
+      OR regexp_replace(COALESCE(p.raw_payload->'request'->'metadata'->>'buyerPhone', ''), '[^0-9]', '', 'g') = ${digits}
+      OR regexp_replace(COALESCE(p.raw_payload->'request'->'metadata'->>'buyerPhone', ''), '[^0-9]', '', 'g') = ${withCountryCode}
+      OR regexp_replace(COALESCE(p.raw_payload->'request'->'payer'->'phone'->>'number', ''), '[^0-9]', '', 'g') = ${digits}
+      OR regexp_replace(COALESCE(p.raw_payload->'request'->'payer'->'phone'->>'number', ''), '[^0-9]', '', 'g') = ${withCountryCode}
+      OR regexp_replace(COALESCE(p.raw_payload->'response'->'payer'->'phone'->>'number', ''), '[^0-9]', '', 'g') = ${digits}
+      OR regexp_replace(COALESCE(p.raw_payload->'response'->'payer'->'phone'->>'number', ''), '[^0-9]', '', 'g') = ${withCountryCode}
+    ORDER BY p.created_at DESC
+    LIMIT 200
+  `;
+
+  return rows || [];
 }
 
 export async function updatePedidoByExternalReference(externalReference, updates) {

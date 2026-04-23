@@ -82,17 +82,41 @@
         <h3>Minhas Cotas</h3>
         <button id="close-my-tickets-popup" type="button" class="ghost-action">Fechar</button>
       </div>
+      <form id="my-tickets-lookup-form" class="my-tickets-lookup-form">
+        <label for="my-tickets-document" class="muted">Digite seu CPF ou Telefone</label>
+        <div class="my-tickets-lookup-row">
+          <input id="my-tickets-document" placeholder="Somente numeros" inputmode="numeric" autocomplete="off" required />
+          <button id="my-tickets-lookup-btn" type="submit">Buscar</button>
+        </div>
+        <small id="my-tickets-lookup-msg" class="muted">Use o mesmo CPF ou telefone informado na compra.</small>
+      </form>
       <div id="my-tickets-popup-list" class="ticket-list"></div>
     </div>
   </div>
 
-  <div id="raffle-fullscreen-picker" class="overlay hidden fullscreen-picker-overlay">
-    <div class="fullscreen-picker-content panel">
-      <div class="panel-head">
-        <h3>Escolha a rifa desejada</h3>
-        <p class="muted">Existem varias rifas ativas no momento.</p>
+  <div id="modal-sorteio" class="modal-overlay" aria-hidden="true">
+    <div class="modal-content raffle-selection-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button id="close-modal-sorteio" class="close-modal" aria-label="Fechar">&times;</button>
+
+      <div class="modal-header">
+        <h2 id="modal-title">Rifa</h2>
+        <p id="modal-status" class="modal-status">Status: -</p>
       </div>
-      <div id="raffle-fullscreen-picker-list" class="raffle-cards fullscreen-picker-list"></div>
+
+      <div class="modal-body">
+        <img id="modal-image" src="" alt="Imagem da Rifa" class="modal-main-image hidden" />
+
+        <div class="selection-area">
+          <h3>Escolha o sorteio ativo:</h3>
+          <div id="modal-raffles-list" class="modal-raffles-list"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <p id="modal-price">R$ 0,00 por cota</p>
+        <p id="modal-selected-info" class="muted">Nenhum sorteio selecionado.</p>
+        <button id="modal-confirmar" class="btn-confirmar" type="button">Confirmar sorteio</button>
+      </div>
     </div>
   </div>
 

@@ -52,6 +52,11 @@ export default async function handler(req, res) {
 
     const payer = body.payer || {};
     const payerEmail = String(payer.email || '').trim();
+    const payerPhone = String(
+      payer.phone?.number ||
+      body.metadata?.buyerPhone ||
+      ''
+    ).replace(/\D/g, '');
     if (!payerEmail) {
       return res.status(400).json({ error: 'payer.email is required' });
     }
@@ -99,6 +104,7 @@ export default async function handler(req, res) {
       buyerName: `${String(payer.first_name || '').trim()} ${String(payer.last_name || '').trim()}`.trim() || null,
       buyerEmail: payerEmail,
       buyerCpf: String(payer.identification?.number || '').trim() || null,
+      buyerPhone: payerPhone || null,
       paymentMethodId: paymentMethodId,
       status: 'creating_payment',
       statusDetail: 'saved_before_mp_create',

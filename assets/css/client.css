@@ -303,6 +303,22 @@ button:disabled {
   gap: 10px;
 }
 
+.my-tickets-lookup-form {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.my-tickets-lookup-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+#my-tickets-lookup-btn {
+  min-width: 120px;
+}
+
 .ticket-item {
   background: #0d1523;
   border: 1px solid #2e3f5c;
@@ -361,25 +377,145 @@ button:disabled {
   display: none;
 }
 
-.fullscreen-picker-overlay {
-  place-items: stretch;
-  padding: 0;
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  padding: 16px;
 }
 
-.fullscreen-picker-content {
-  width: 100%;
-  min-height: 100vh;
-  border-radius: 0;
+.modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.raffle-selection-modal {
+  background-color: #121b2b;
+  border: 1px solid #304663;
+  border-radius: 14px;
+  width: min(940px, 96vw);
+  max-height: min(88vh, 860px);
+  overflow: auto;
+  position: relative;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8);
+  transform: scale(0.7);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.modal-overlay.active .raffle-selection-modal {
+  transform: scale(1);
+}
+
+.close-modal {
+  position: absolute;
+  top: 14px;
+  right: 14px;
   border: 0;
-  background: radial-gradient(circle at 16% 8%, #173762 0%, #0d1a2c 42%, #070d17 100%);
-  display: grid;
-  align-content: start;
-  gap: 16px;
-  padding: clamp(18px, 3vw, 32px);
+  background: transparent;
+  color: #fff;
+  font-size: 2rem;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  line-height: 1;
+  opacity: 0.72;
+  cursor: pointer;
 }
 
-.fullscreen-picker-list {
-  margin-top: 0;
+.close-modal:hover {
+  opacity: 1;
+  color: #ffd46b;
+}
+
+.raffle-selection-modal .modal-header {
+  padding: 22px 24px 10px;
+}
+
+.raffle-selection-modal .modal-header h2 {
+  margin: 0;
+}
+
+.modal-status {
+  margin-top: 6px;
+  font-weight: 800;
+  color: #59d58c;
+}
+
+.raffle-selection-modal .modal-body {
+  padding: 0 24px 14px;
+}
+
+.modal-main-image {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid #2f425e;
+  background: #0a1220;
+  margin: 10px 0 14px;
+}
+
+.selection-area h3 {
+  margin: 0 0 10px;
+}
+
+.modal-raffles-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.modal-raffle-btn {
+  border: 1px solid #35507a;
+  border-radius: 10px;
+  background: #0e1728;
+  color: #cde0ff;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  padding: 10px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.modal-raffle-btn.active {
+  background: #1e88ff;
+  border-color: #75bdff;
+  color: #fff;
+}
+
+.modal-raffle-btn .status {
+  display: block;
+  opacity: 0.82;
+  font-size: 0.66rem;
+  margin-bottom: 6px;
+}
+
+.raffle-selection-modal .modal-footer {
+  padding: 8px 24px 24px;
+}
+
+#modal-price {
+  color: #ffd46b;
+  font-size: 1rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+#modal-selected-info {
+  margin: 8px 0 12px;
+}
+
+.btn-confirmar {
+  width: 100%;
 }
 
 .modal {
@@ -482,6 +618,19 @@ button:disabled {
 
   .ticket-list {
     grid-template-columns: 1fr;
+  }
+
+  .my-tickets-lookup-row {
+    grid-template-columns: 1fr;
+  }
+
+  .raffle-selection-modal {
+    width: min(96vw, 540px);
+  }
+
+  .modal-raffles-list {
+    grid-template-columns: 1fr;
+    max-height: 280px;
   }
 
   .right form {

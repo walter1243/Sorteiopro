@@ -35,9 +35,20 @@ const ui = {
   selectedTotal: document.getElementById('selected-total'),
   myTicketsPopup: document.getElementById('my-tickets-popup'),
   myTicketsPopupList: document.getElementById('my-tickets-popup-list'),
+  myTicketsLookupForm: document.getElementById('my-tickets-lookup-form'),
+  myTicketsDocument: document.getElementById('my-tickets-document'),
+  myTicketsLookupBtn: document.getElementById('my-tickets-lookup-btn'),
+  myTicketsLookupMsg: document.getElementById('my-tickets-lookup-msg'),
   closeMyTicketsPopupBtn: document.getElementById('close-my-tickets-popup'),
-  raffleFullscreenPicker: document.getElementById('raffle-fullscreen-picker'),
-  raffleFullscreenPickerList: document.getElementById('raffle-fullscreen-picker-list'),
+  raffleModalOverlay: document.getElementById('modal-sorteio'),
+  raffleModalCloseBtn: document.getElementById('close-modal-sorteio'),
+  raffleModalTitle: document.getElementById('modal-title'),
+  raffleModalStatus: document.getElementById('modal-status'),
+  raffleModalImage: document.getElementById('modal-image'),
+  raffleModalRafflesList: document.getElementById('modal-raffles-list'),
+  raffleModalPrice: document.getElementById('modal-price'),
+  raffleModalSelectedInfo: document.getElementById('modal-selected-info'),
+  raffleModalConfirmBtn: document.getElementById('modal-confirmar'),
   paymentModal: document.getElementById('payment-modal'),
   closePaymentModalBtn: document.getElementById('close-payment-modal'),
   paymentBrickContainer: document.getElementById('payment-brick-container'),
@@ -73,6 +84,10 @@ const state = {
   pendingPrizeClaims: [],
   checkoutContext: null,
   myTickets: [],
+  lookupTickets: [],
+  raffleModal: {
+    raffleId: null
+  },
   activeTab: 'shop',
   hasPickedRaffle: false
 };
@@ -101,6 +116,10 @@ const fakeNames = [
 
 function getProduct() {
   return state.raffles.find((r) => r.id === state.selectedRaffleId) || state.raffles[0];
+}
+
+function getRaffleById(raffleId) {
+  return state.raffles.find((raffle) => raffle.id === raffleId) || null;
 }
 
 function getActiveRaffles() {
@@ -267,64 +286,97 @@ function renderRaffleCards() {
 
   [...ui.raffleCards.querySelectorAll('button[data-id]')].forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (state.hasPickedRaffle && btn.dataset.id === state.selectedRaffleId) {
-        if (getActiveRaffles().length > 1) {
-          openFullscreenPicker();
-        } else {
-          state.hasPickedRaffle = false;
-          state.selectedNumbers = [];
-          render();
-        }
-        return;
-      }
-
-      state.selectedRaffleId = btn.dataset.id;
-      state.selectedNumbers = [];
-      state.hasPickedRaffle = true;
-      closeFullscreenPicker();
-      subscribeTickets();
-      render();
+      openRaffleSelectionModal(btn.dataset.id);
     });
   });
 }
 
-function renderFullscreenPicker(activeRaffles) {
-  ui.raffleFullscreenPickerList.innerHTML = activeRaffles
-    .map((raffle) => `
-      <button class="raffle-card" data-picker-id="${raffle.id}" type="button">
-        <p class="status">${statusLabel(raffle.status)}</p>
-        ${raffle.imageUrl ? `<img src="${raffle.imageUrl}" alt="Premio" class="card-image" />` : ''}
-        <strong>${raffle.prizeName || raffle.title}</strong>
-        <p>R$ ${formatCurrency(raffle.price)} por cota</p>
-      </button>
-    `)
-    .join('');
-
-  [...ui.raffleFullscreenPickerList.querySelectorAll('button[data-picker-id]')].forEach((btn) => {
-    btn.addEventListener('click', () => {
-      state.selectedRaffleId = btn.dataset.pickerId;
-      state.selectedNumbers = [];
-      state.hasPickedRaffle = true;
-      closeFullscreenPicker();
-      subscribeTickets();
-      render();
-    });
-  });
-}
-
-function openFullscreenPicker() {
+function renderRaffleSelectionModal() {
   const activeRaffles = getActiveRaffles();
-  if (activeRaffles.length <= 1) {
-    closeFullscreenPicker();
+  if (!activeRaffles.length) {
+    ui.raffleModalTitle.textContent = 'Nenhuma rifa ativa';
+    ui.raffleModalStatus.textContent = 'Status: -';
+    ui.raffleModalPrice.textContent = 'R$ 0,00 por cota';
+    ui.raffleModalSelectedInfo.textContent = 'Nenhum sorteio selecionado.';
+    ui.raffleModalRafflesList.innerHTML = '<p class="muted">Nao existem sorteios ativos no momento.</p>';
+    ui.raffleModalImage.classList.add('hidden');
+    ui.raffleModalConfirmBtn.disabled = true;
     return;
   }
 
-  renderFullscreenPicker(activeRaffles);
-  ui.raffleFullscreenPicker.classList.remove('hidden');
+  const selected = getRaffleById(state.raffleModal.raffleId) || activeRaffles[0];
+  state.raffleModal.raffleId = selected.id;
+
+  ui.raffleModalTitle.textContent = selected.prizeName || selected.title || 'Rifa';
+  ui.raffleModalStatus.textContent = `Status: ${statusLabel(selected.status)}`;
+  ui.raffleModalPrice.textContent = `R$ ${formatCurrency(selected.price)} por cota`;
+
+  if (selected.imageUrl) {
+    ui.raffleModalImage.src = selected.imageUrl;
+    ui.raffleModalImage.classList.remove('hidden');
+  } else {
+    ui.raffleModalImage.src = '';
+    ui.raffleModalImage.classList.add('hidden');
+  }
+
+  ui.raffleModalSelectedInfo.textContent = `Sorteio selecionado: ${selected.prizeName || selected.title || 'Rifa'}`;
+
+  ui.raffleModalRafflesList.innerHTML = activeRaffles
+    .map((raffle) => {
+      const activeClass = raffle.id === selected.id ? 'active' : '';
+      return `
+        <button type="button" class="modal-raffle-btn ${activeClass}" data-modal-raffle-id="${raffle.id}">
+          <span class="status">${statusLabel(raffle.status)}</span>
+          <strong>${raffle.prizeName || raffle.title}</strong>
+          <span>R$ ${formatCurrency(raffle.price)} por cota</span>
+        </button>
+      `;
+    })
+    .join('');
+
+  [...ui.raffleModalRafflesList.querySelectorAll('button[data-modal-raffle-id]')].forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.raffleModal.raffleId = btn.dataset.modalRaffleId;
+      renderRaffleSelectionModal();
+    });
+  });
+
+  ui.raffleModalConfirmBtn.disabled = false;
 }
 
-function closeFullscreenPicker() {
-  ui.raffleFullscreenPicker.classList.add('hidden');
+function openRaffleSelectionModal(raffleId) {
+  const raffle = getRaffleById(raffleId);
+  if (!raffle) {
+    return;
+  }
+
+  state.raffleModal.raffleId = raffle.id;
+
+  renderRaffleSelectionModal();
+
+  ui.raffleModalOverlay.classList.add('active');
+  ui.raffleModalOverlay.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeRaffleSelectionModal() {
+  ui.raffleModalOverlay.classList.remove('active');
+  ui.raffleModalOverlay.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+function confirmRaffleSelectionFromModal() {
+  const raffle = getRaffleById(state.raffleModal.raffleId);
+  if (!raffle) {
+    return;
+  }
+
+  state.selectedRaffleId = raffle.id;
+  state.selectedNumbers = [];
+  state.hasPickedRaffle = true;
+  closeRaffleSelectionModal();
+  subscribeTickets();
+  render();
 }
 
 async function closePaymentModal() {
@@ -946,30 +998,74 @@ function renderHeader() {
 }
 
 function renderMyTickets() {
-  const product = getProduct();
-  if (!state.hasPickedRaffle || !product) {
-    ui.myTicketsPopupList.innerHTML = '<p class="muted">Escolha uma rifa ativa para visualizar suas cotas.</p>';
+  if (!state.lookupTickets.length) {
+    ui.myTicketsPopupList.innerHTML = '<p class="muted">Nenhuma cota carregada. Informe seu CPF ou telefone para buscar.</p>';
     return;
   }
 
-  const currentRaffleTickets = state.myTickets.filter((t) => t.raffleId === product.id);
-
-  if (!currentRaffleTickets.length) {
-    ui.myTicketsPopupList.innerHTML = '<p class="muted">Nenhuma cota comprada ainda.</p>';
-    return;
-  }
-
-  const cards = currentRaffleTickets
+  const cards = state.lookupTickets
     .map((t) => `
       <article class="ticket-item">
-        <p class="muted">${t.raffleTitle || 'Rifa'}</p>
+        <p class="muted">${t.raffleTitle || 'Rifa'}${t.createdAt ? ` • ${new Date(t.createdAt).toLocaleDateString('pt-BR')}` : ''}</p>
         <strong>${t.number || '000'}</strong>
-        <p class="muted">${t.status === 'awaiting_payment' ? 'Pendente' : 'Confirmado'}</p>
+        <p class="muted">${t.statusLabel || 'Confirmado'}</p>
       </article>
     `)
     .join('');
 
   ui.myTicketsPopupList.innerHTML = cards;
+}
+
+function normalizeLookupDocument(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+async function fetchTicketsByDocument(documentDigits) {
+  const response = await fetch(`/api/my-tickets?document=${encodeURIComponent(documentDigits)}`);
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.error || 'Falha ao buscar cotas.');
+  }
+  return data;
+}
+
+async function onLookupMyTickets(event) {
+  event.preventDefault();
+
+  const documentDigits = normalizeLookupDocument(ui.myTicketsDocument.value);
+  if (!documentDigits) {
+    showToast('Informe o CPF ou telefone para buscar suas cotas.');
+    return;
+  }
+
+  if (documentDigits.length < 10) {
+    showToast('Digite um CPF ou telefone valido.');
+    return;
+  }
+
+  ui.myTicketsLookupBtn.disabled = true;
+  ui.myTicketsLookupMsg.textContent = 'Buscando cotas...';
+
+  try {
+    const data = await fetchTicketsByDocument(documentDigits);
+    state.lookupTickets = Array.isArray(data?.tickets) ? data.tickets : [];
+
+    if (!state.lookupTickets.length) {
+      ui.myTicketsLookupMsg.textContent = 'Nenhuma cota encontrada para este documento.';
+    } else {
+      ui.myTicketsLookupMsg.textContent = `${state.lookupTickets.length} cota(s) encontrada(s).`;
+    }
+
+    renderMyTickets();
+  } catch (error) {
+    console.error(error);
+    state.lookupTickets = [];
+    renderMyTickets();
+    ui.myTicketsLookupMsg.textContent = error?.message || 'Erro ao buscar cotas.';
+    showToast(error?.message || 'Erro ao buscar cotas.');
+  } finally {
+    ui.myTicketsLookupBtn.disabled = false;
+  }
 }
 
 function render() {
@@ -996,26 +1092,18 @@ function handleActiveRaffleFlow() {
 
   if (!activeRaffles.length) {
     state.hasPickedRaffle = false;
-    closeFullscreenPicker();
     return;
   }
 
   if (activeRaffles.length === 1) {
     state.selectedRaffleId = activeRaffles[0].id;
     state.hasPickedRaffle = true;
-    closeFullscreenPicker();
     return;
   }
 
   if (!activeRaffles.some((item) => item.id === state.selectedRaffleId)) {
     state.selectedRaffleId = activeRaffles[0].id;
     state.hasPickedRaffle = false;
-  }
-
-  if (!state.hasPickedRaffle) {
-    openFullscreenPicker();
-  } else {
-    closeFullscreenPicker();
   }
 }
 
@@ -1187,8 +1275,25 @@ async function init() {
   ui.tabMine.addEventListener('click', () => {
     state.activeTab = 'mine';
     renderTabs();
+    ui.myTicketsLookupMsg.textContent = 'Use o mesmo CPF ou telefone informado na compra.';
     ui.myTicketsPopup.classList.remove('hidden');
+    ui.myTicketsDocument.focus();
   });
+  ui.myTicketsLookupForm.addEventListener('submit', onLookupMyTickets);
+
+  ui.raffleModalCloseBtn.addEventListener('click', closeRaffleSelectionModal);
+  ui.raffleModalConfirmBtn.addEventListener('click', confirmRaffleSelectionFromModal);
+  ui.raffleModalOverlay.addEventListener('click', (event) => {
+    if (event.target === ui.raffleModalOverlay) {
+      closeRaffleSelectionModal();
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && ui.raffleModalOverlay.classList.contains('active')) {
+      closeRaffleSelectionModal();
+    }
+  });
+
   ui.closePaymentModalBtn.addEventListener('click', () => {
     closePaymentModal();
   });
