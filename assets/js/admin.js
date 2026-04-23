@@ -400,7 +400,32 @@ function setImageDataUrl(url) {
   ui.prizeImagePreview.src = url;
   ui.prizeImagePreview.classList.remove('hidden');
   ui.prizeImagePreview.alt = `Imagem da rifa ${raffle?.prizeName || raffle?.title || 'selecionada'}`;
-  ui.imageSelectionHint.textContent = `Nova imagem pronta para salvar em ${raffle?.prizeName || raffle?.title || 'esta rifa'}.`;
+  ui.imageSelectionHint.textContent = `Salvando imagem de ${raffle?.prizeName || raffle?.title || 'esta rifa'}...`;
+
+  if (!raffle) {
+    return;
+  }
+
+  const updated = state.raffles.map((item) =>
+    item.id === raffle.id
+      ? {
+          ...item,
+          imageUrl: url
+        }
+      : item
+  );
+
+  persistCatalog(updated)
+    .then(() => {
+      state.raffles = updated;
+      ui.imageSelectionHint.textContent = `Imagem atual vinculada a ${raffle.prizeName || raffle.title}.`;
+      showToast('Imagem salva no catalogo.');
+    })
+    .catch((error) => {
+      console.error(error);
+      ui.imageSelectionHint.textContent = 'Falha ao salvar imagem no servidor.';
+      showToast(error?.message || 'Falha ao salvar imagem.');
+    });
 }
 
 function handlePastedImage(event) {

@@ -137,12 +137,12 @@ function getPreferredActiveRaffle() {
   }
 
   const selected = activeRaffles.find((item) => item.id === state.selectedRaffleId);
-  if (selected) {
+  if (selected && String(selected.imageUrl || '').trim()) {
     return selected;
   }
 
   const withImage = activeRaffles.find((item) => String(item.imageUrl || '').trim());
-  return withImage || activeRaffles[0];
+  return withImage || selected || activeRaffles[0];
 }
 
 function getPrizeMap(product) {
@@ -1358,39 +1358,7 @@ async function init() {
     document.querySelectorAll('.payment-method-btn').forEach(btn => btn.classList.remove('active'));
   });
 
-  // Confirm PIX payment
-  document.getElementById('confirm-pix-payment-btn').addEventListener('click', async () => {
-    try {
-      const checkoutContext = state.checkoutContext;
-      if (!checkoutContext) {
-        showToast('Checkout sem contexto.');
-        return;
-      }
-
-      // If PIX is not generated yet, generate it.
-      if (!checkoutContext.paymentId) {
-        await processPixPayment();
-        return;
-      }
-
-      // If already generated, this button checks whether payment has been approved.
-      const statusData = await fetchPaymentStatus(checkoutContext.paymentId);
-      const status = String(statusData.status || '').toLowerCase();
-      if (status === 'approved') {
-        await saveApprovedTickets(checkoutContext);
-        await applyPrizeClaimFlow(checkoutContext);
-        state.selectedNumbers = [];
-        render();
-        showToast('PIX aprovado! Cotas liberadas com sucesso.');
-        return;
-      }
-
-      showToast('Pagamento ainda pendente. Aguarde alguns segundos e tente novamente.');
-    } catch (error) {
-      console.error(error);
-      showToast(error?.message || 'Erro ao processar PIX.');
-    }
-  });
+  // Confirmacao manual removida para evitar liberacao indevida de cotas.
 
   ui.closePrizeClaimBtn.addEventListener('click', closePrizeClaimModal);
   ui.prizeClaimModal.addEventListener('click', (event) => {
