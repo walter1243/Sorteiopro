@@ -122,7 +122,9 @@ const state = {
   drawHistory: [],          // [{number, prizeValue, buyerName, buyerWhatsapp, date}]
   drawSpinTimer: null,
   drawModalRaffleId: null,  // raffle id being chosen in modal
-  quotaRenderToken: 0
+  quotaRenderToken: 0,
+  currentQuotaTickets: new Map(),
+  raffleOptionsMarkup: ''
 };
 
 let unsubTickets = null;
@@ -130,6 +132,43 @@ let allTicketsUnsubs = [];
 
 function currentRaffle() {
   return state.raffles.find((r) => r.id === state.selectedRaffleId) || state.raffles[0];
+}
+
+function buildRaffleOptionsMarkup() {
+  return state.raffles
+    .map((item) => `<option value="${item.id}">${item.prizeName || item.title} (${statusLabel(item.status)})</option>`)
+    .join('');
+}
+
+function syncRaffleSelectors() {
+  const markup = buildRaffleOptionsMarkup();
+  if (markup !== state.raffleOptionsMarkup) {
+    state.raffleOptionsMarkup = markup;
+    ui.raffleSelect.innerHTML = markup;
+    ui.buyersRaffleSelect.innerHTML = markup;
+  }
+
+  const raffle = currentRaffle();
+  const value = raffle?.id || '';
+  if (ui.raffleSelect.value !== value) {
+    ui.raffleSelect.value = value;
+  }
+  if (ui.buyersRaffleSelect.value !== value) {
+    ui.buyersRaffleSelect.value = value;
+  }
+}
+
+function openQuotaDetailFromEvent(event) {
+  const button = event.target.closest('.quota-chip-button');
+  if (!button) {
+    return;
+  }
+
+  const number = button.dataset.number || '';
+  const ticket = state.currentQuotaTickets.get(number);
+  if (ticket) {
+    openTicketDetail(ticket);
+  }
 }
 
 function isMobileInteraction() {
@@ -170,11 +209,7 @@ function renderForm() {
     return;
   }
 
-  ui.raffleSelect.innerHTML = state.raffles
-    .map((r) => `<option value="${r.id}">${r.prizeName || r.title} (${statusLabel(r.status)})</option>`)
-    .join('');
-
-  ui.raffleSelect.value = raffle.id;
+  syncRaffleSelectors();
   ui.prizeName.value = raffle.prizeName || raffle.title;
   ui.raffleTotalValue.value = raffle.totalValue || Number(raffle.price || 0) * Number(raffle.totalQuotas || 0);
   ui.quotaPrice.value = raffle.price;
@@ -280,10 +315,7 @@ function renderBuyers() {
     .map(([number, data]) => ({ number, ...data }))
     .sort((a, b) => Number(a.number) - Number(b.number));
 
-  ui.buyersRaffleSelect.innerHTML = state.raffles
-    .map((item) => `<option value="${item.id}">${item.prizeName || item.title} (${statusLabel(item.status)})</option>`)
-    .join('');
-  ui.buyersRaffleSelect.value = raffle?.id || '';
+  syncRaffleSelectors();
 
   if (!list.length) {
     ui.buyersBody.innerHTML = '<tr><td colspan="4">Nenhuma cota comprada ainda.</td></tr>';
@@ -322,11 +354,12 @@ function renderQuotaOverview(raffle, soldList) {
   const soldByNumber = new Map(
     soldList.map((item) => [item.number, item])
   );
+  state.currentQuotaTickets = soldByNumber;
   const totalQuotas = Number(raffle.totalQuotas || 0);
   const availableCount = Math.max(totalQuotas - soldList.length, 0);
 
   const isMobile = window.matchMedia('(max-width: 760px)').matches || isMobileInteraction();
-  const maxRendered = isMobile ? 2500 : 5000;
+  const maxRendered = isMobile ? 1200 : 3000;
   const renderTotal = Math.min(totalQuotas, maxRendered);
   const token = ++state.quotaRenderToken;
 
@@ -364,12 +397,6 @@ function renderQuotaOverview(raffle, soldList) {
         chip.className = 'quota-chip quota-chip-button';
         chip.dataset.number = number;
         chip.setAttribute('aria-label', `Cota ${number} de ${firstName || 'comprador'}`);
-
-        if (isMobileInteraction()) {
-          chip.addEventListener('click', () => openTicketDetail(soldEntry));
-        } else {
-          chip.addEventListener('dblclick', () => openTicketDetail(soldEntry));
-        }
       } else {
         chip = document.createElement('span');
         chip.className = 'quota-chip';
@@ -403,14 +430,11 @@ function renderQuotaOverview(raffle, soldList) {
 }
 
 function renderBuyersLoadingState() {
-  const raffle = currentRaffle();
-  ui.buyersRaffleSelect.innerHTML = state.raffles
-    .map((item) => `<option value="${item.id}">${item.prizeName || item.title} (${statusLabel(item.status)})</option>`)
-    .join('');
-  ui.buyersRaffleSelect.value = raffle?.id || '';
+  syncRaffleSelectors();
   ui.buyersBody.innerHTML = '<tr><td colspan="4">Carregando cotas desta rifa...</td></tr>';
   ui.quotaOverviewSummary.textContent = 'Carregando cotas da rifa selecionada...';
   ui.quotaOverviewGrid.innerHTML = '';
+  state.currentQuotaTickets = new Map();
   ui.winnerBox.textContent = 'Carregando dados da rifa selecionada...';
 }
 
@@ -658,6 +682,7 @@ async function subscribeCatalog() {
     const payload = await response.json();
     const items = Array.isArray(payload.items) && payload.items.length ? payload.items : DEFAULT_RAFFLES;
     state.raffles = items;
+    state.raffleOptionsMarkup = '';
 
     if (!state.raffles.some((r) => r.id === state.selectedRaffleId)) {
       state.selectedRaffleId = state.raffles[0].id;
@@ -674,6 +699,7 @@ async function subscribeCatalog() {
   } catch (error) {
     console.error(error);
     state.raffles = DEFAULT_RAFFLES;
+    state.raffleOptionsMarkup = '';
     state.selectedRaffleId = DEFAULT_RAFFLES[0].id;
     state.drawRaffleId = state.selectedRaffleId;
     renderForm();
@@ -1317,6 +1343,20 @@ async function init() {
   });
   ui.buyersRaffleSelect.addEventListener('change', (event) => {
     onRaffleSelectionChange(event.target.value);
+  });
+
+  ui.quotaOverviewGrid.addEventListener('click', (event) => {
+    if (!isMobileInteraction()) {
+      return;
+    }
+    openQuotaDetailFromEvent(event);
+  });
+
+  ui.quotaOverviewGrid.addEventListener('dblclick', (event) => {
+    if (isMobileInteraction()) {
+      return;
+    }
+    openQuotaDetailFromEvent(event);
   });
 
   ui.raffleTotalValue.addEventListener('input', recalcQuotaPrice);
