@@ -30,6 +30,13 @@ function getNotificationUrl() {
   return process.env.MP_WEBHOOK_URL || 'https://sorteiopro-olive.vercel.app/api/webhook';
 }
 
+function buildFallbackEmail({ phoneDigits, externalReference }) {
+  const safePhone = String(phoneDigits || '').replace(/\D/g, '').slice(-11);
+  const safeRef = String(externalReference || '').replace(/[^a-zA-Z0-9]/g, '').slice(-20);
+  const token = safePhone || safeRef || Date.now().toString();
+  return `cliente+${token}@sorteiopro.local`;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -51,15 +58,17 @@ export default async function handler(req, res) {
     }
 
     const payer = body.payer || {};
-    const payerEmail = String(payer.email || '').trim();
     const payerPhone = String(
       payer.phone?.number ||
       body.metadata?.buyerPhone ||
       ''
     ).replace(/\D/g, '');
-    if (!payerEmail) {
-      return res.status(400).json({ error: 'payer.email is required' });
-    }
+    const payerEmailInput = String(payer.email || '').trim();
+    const externalReferenceRaw = sanitizeExternalReference(body.external_reference);
+    const payerEmail = payerEmailInput || buildFallbackEmail({
+      phoneDigits: payerPhone,
+      externalReference: externalReferenceRaw
+    });
 
     const payload = {
       transaction_amount: Number(transactionAmount.toFixed(2)),

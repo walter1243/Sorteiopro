@@ -18,6 +18,11 @@ function statusToLabel(status) {
   return value ? value : 'Sem status';
 }
 
+function isPurchasedStatus(status) {
+  const value = String(status || '').toLowerCase();
+  return value === 'approved' || value === 'paid';
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -46,12 +51,17 @@ export default async function handler(req, res) {
         .filter(Boolean);
 
       for (const number of rawNumbers) {
+        const ticketStatus = row.mp_status || row.status || null;
+        if (!isPurchasedStatus(ticketStatus)) {
+          continue;
+        }
+
         tickets.push({
           raffleId: row.raffle_id || null,
           raffleTitle: row.raffle_title || 'Rifa',
           number,
-          status: row.mp_status || row.status || null,
-          statusLabel: statusToLabel(row.mp_status || row.status),
+          status: ticketStatus,
+          statusLabel: statusToLabel(ticketStatus),
           createdAt: row.created_at || null,
           externalReference: row.external_reference || null
         });

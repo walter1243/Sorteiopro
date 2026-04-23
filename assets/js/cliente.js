@@ -607,6 +607,8 @@ async function processCardPayment(cardHolder, cardNumber, expiry, cvv) {
     throw new Error('Checkout sem contexto.');
   }
 
+  const whatsappDigits = String(checkoutContext.buyer.whatsapp || '').replace(/\D/g, '');
+
   // Format card data
   const [expiryMonth, expiryYear] = expiry.split('/');
   const cardPayload = {
@@ -634,7 +636,8 @@ async function processCardPayment(cardHolder, cardNumber, expiry, cvv) {
     external_reference: `${checkoutContext.product.id}|${checkoutContext.selectedNumbers.join(',')}`,
     metadata: {
       raffleId: checkoutContext.product.id,
-      selectedNumbers: checkoutContext.selectedNumbers.join(',')
+      selectedNumbers: checkoutContext.selectedNumbers.join(','),
+      buyerPhone: whatsappDigits || undefined
     }
   };
 
@@ -683,16 +686,9 @@ async function processPixPayment() {
   }
   isPixGenerationInFlight = true;
 
-  // Validate CPF format
-  const cpfDigits = checkoutContext.buyer.cpf.replace(/\D/g, '');
-  if (cpfDigits.length !== 11) {
-    throw new Error('CPF inválido. Deve ter 11 dígitos.');
-  }
-  // Check for obvious invalid patterns
-  const allSame = /^(\d)\1{10}$/.test(cpfDigits);
-  if (allSame) {
-    throw new Error('CPF inválido. Todos os dígitos são iguais.');
-  }
+  const cpfDigits = String(checkoutContext.buyer.cpf || '').replace(/\D/g, '');
+  const hasValidCpf = cpfDigits.length === 11 && !/^(\d)\1{10}$/.test(cpfDigits);
+  const whatsappDigits = String(checkoutContext.buyer.whatsapp || '').replace(/\D/g, '');
 
   const pixPayload = {
     transaction_amount: Number(checkoutContext.totalAmount.toFixed(2)),
@@ -702,15 +698,16 @@ async function processPixPayment() {
       email: checkoutContext.buyer.email,
       first_name: checkoutContext.buyer.name.split(' ')[0] || checkoutContext.buyer.name,
       last_name: checkoutContext.buyer.name.split(' ').slice(1).join(' ') || '-',
-      identification: {
+      identification: hasValidCpf ? {
         type: 'CPF',
         number: cpfDigits
-      }
+      } : undefined
     },
     external_reference: `${checkoutContext.product.id}|${checkoutContext.selectedNumbers.join(',')}`,
     metadata: {
       raffleId: checkoutContext.product.id,
-      selectedNumbers: checkoutContext.selectedNumbers.join(',')
+      selectedNumbers: checkoutContext.selectedNumbers.join(','),
+      buyerPhone: whatsappDigits || undefined
     }
   };
 
@@ -1136,6 +1133,11 @@ function normalizeLookupDocument(value) {
   return String(value || '').replace(/\D/g, '');
 }
 
+function isBoughtTicketStatus(status) {
+  const value = String(status || '').toLowerCase();
+  return value === 'approved' || value === 'paid';
+}
+
 async function fetchTicketsByDocument(documentDigits) {
   const response = await fetch(`/api/my-tickets?document=${encodeURIComponent(documentDigits)}`);
   const data = await response.json();
@@ -1166,11 +1168,12 @@ async function onLookupMyTickets(event) {
 
   try {
     const data = await fetchTicketsByDocument(documentDigits);
-    state.lookupTickets = Array.isArray(data?.tickets) ? data.tickets : [];
+    const fetchedTickets = Array.isArray(data?.tickets) ? data.tickets : [];
+    state.lookupTickets = fetchedTickets.filter((ticket) => isBoughtTicketStatus(ticket?.status));
     state.lookupHasSearched = true;
 
     if (!state.lookupTickets.length) {
-      setLookupAlert('Nenhuma cota encontrada para este documento.', 'error');
+      setLookupAlert('Nenhuma cota comprada encontrada para este documento.', 'error');
     } else {
       setLookupAlert(`${state.lookupTickets.length} cota(s) encontrada(s).`, 'success');
     }
@@ -1379,6 +1382,19 @@ async function processCheckout(event) {
     return;
   }
 
+  const buyerName = ui.name.value.trim();
+  const buyerWhatsapp = (ui.whatsapp?.value || '').trim();
+
+  if (!buyerName) {
+    showToast('Informe o nome completo.');
+    return;
+  }
+
+  if (!buyerWhatsapp) {
+    showToast('Informe o WhatsApp com DDD.');
+    return;
+  }
+
   ui.buyBtn.disabled = true;
 
   try {
@@ -1387,10 +1403,10 @@ async function processCheckout(event) {
       selectedNumbers: [...state.selectedNumbers],
       totalAmount: state.selectedNumbers.length * Number(product.price),
       buyer: {
-        name: ui.name.value.trim(),
+        name: buyerName,
         email: ui.email.value.trim(),
         cpf: ui.cpf.value.trim(),
-        whatsapp: (ui.whatsapp?.value || '').trim()
+        whatsapp: buyerWhatsapp
       }
     };
 
