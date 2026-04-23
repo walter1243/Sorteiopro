@@ -531,7 +531,7 @@ button:disabled {
 .modal-main-image {
   width: 100%;
   max-height: 220px;
-  object-fit: contain;
+  object-fit: cover;
   border-radius: 10px;
   border: 1px solid #2f425e;
   background: #0a1220;
@@ -713,7 +713,8 @@ button:disabled {
   }
 
   #raffle-cards .card-image {
-    height: 74px;
+    height: 148px;
+    object-fit: cover;
   }
 
   .ticket-list {
@@ -726,6 +727,12 @@ button:disabled {
 
   .raffle-selection-modal {
     width: min(96vw, 540px);
+  }
+
+  .modal-main-image {
+    max-height: none;
+    height: 200px;
+    object-fit: cover;
   }
 
   .modal-raffles-list {
