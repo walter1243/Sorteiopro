@@ -425,14 +425,17 @@ export async function listCatalogRaffles() {
   return (rows || []).map((row) => {
     const raw = row.raw_payload && typeof row.raw_payload === 'object' ? row.raw_payload : {};
     return {
-      ...raw,
       id: raw.id || row.id,
       title: raw.title || raw.prizeName || row.title || 'Rifa',
       prizeName: raw.prizeName || raw.title || row.title || 'Rifa',
       price: Number(raw.price ?? row.price ?? 0),
       totalQuotas: Number(raw.totalQuotas ?? row.total_quotas ?? 0),
       imageUrl: raw.imageUrl || row.cover_image_url || '',
-      status: raw.status || row.status || 'paused'
+      status: raw.status || row.status || 'paused',
+      winner: raw.winner || null,
+      drawMethod: raw.drawMethod || 'random_internal',
+      prizeNumbers: Array.isArray(raw.prizeNumbers) ? raw.prizeNumbers : [],
+      prizeWhatsapp: raw.prizeWhatsapp || ''
     };
   });
 }
@@ -481,4 +484,20 @@ export async function saveCatalogRaffles(items) {
         updated_at = NOW()
     `;
   }
+}
+
+export async function ensureRifaExists(raffleId, title = 'Rifa') {
+  const sql = requireSqlClient();
+  await ensureBusinessSchema();
+
+  const id = String(raffleId || '').trim();
+  if (!id) {
+    return;
+  }
+
+  await sql`
+    INSERT INTO rifas (id, title, price, total_quotas, status, raw_payload, updated_at)
+    VALUES (${id}, ${title || 'Rifa'}, 0, NULL, 'active', '{}'::jsonb, NOW())
+    ON CONFLICT (id) DO NOTHING
+  `;
 }

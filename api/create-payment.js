@@ -1,9 +1,9 @@
 const MP_API_BASE = 'https://api.mercadopago.com';
 import {
   createPedido,
+  ensureRifaExists,
   insertPaymentEvent,
   updatePedidoByExternalReference,
-  upsertRifa
 } from './_lib/neon.js';
 
 function getAccessToken() {
@@ -84,16 +84,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'external_reference is required' });
     }
 
-    // Save order before generating PIX/Card payment in Mercado Pago.
+    // Ensure raffle FK exists without overriding catalog fields (price/image/title).
     if (raffleId) {
-      await upsertRifa({
-        id: raffleId,
-        title: String(body.description || 'Rifa sem titulo'),
-        price: Number(transactionAmount.toFixed(2)),
-        totalQuotas: null,
-        status: 'active',
-        rawPayload: payload.metadata || {}
-      });
+      await ensureRifaExists(raffleId, String(body.description || 'Rifa sem titulo'));
     }
 
     await createPedido({

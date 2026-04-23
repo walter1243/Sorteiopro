@@ -11,17 +11,17 @@ export default async function handler(req, res) {
     }
   }
 
-  if (req.method === 'PUT') {
+  if (req.method === 'POST' || req.method === 'PUT') {
     try {
       const items = Array.isArray(req.body?.items) ? req.body.items : [];
       await saveCatalogRaffles(items);
       return res.status(200).json({ ok: true, count: items.length });
     } catch (error) {
-      console.error('[catalog][PUT] Error:', error);
+      console.error('[catalog][WRITE] Error:', error);
       return res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
   }
 
-  res.setHeader('Allow', 'GET, PUT');
+  res.setHeader('Allow', 'GET, POST, PUT');
   return res.status(405).json({ error: 'Method Not Allowed' });
 }

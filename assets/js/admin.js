@@ -412,10 +412,10 @@ function handlePastedImage(event) {
         continue;
       }
 
-      const reader = new FileReader();
-      reader.onload = () => setImageDataUrl(String(reader.result || ''));
-      reader.readAsDataURL(file);
-      showToast('Imagem colada com sucesso.');
+      compressImage(file, (compressedBase64) => {
+        setImageDataUrl(compressedBase64);
+        showToast('Imagem colada e comprimida.');
+      });
       break;
     }
   }
@@ -430,8 +430,8 @@ function compressImage(file, callback) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      // Redimensiona para max 600px mantendo proporção
-      const maxWidth = 600;
+      // Redimensiona para max 480px mantendo proporção
+      const maxWidth = 480;
       let { width, height } = img;
       if (width > maxWidth) {
         height = (maxWidth / width) * height;
@@ -442,8 +442,8 @@ function compressImage(file, callback) {
       canvas.height = height;
       ctx.drawImage(img, 0, 0, width, height);
       
-      // Comprime para JPEG 70%
-      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+      // Comprime para JPEG 60% para reduzir payload da API
+      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
       callback(compressedBase64);
     };
     img.src = String(event.target?.result || '');
@@ -517,7 +517,7 @@ async function onSaveSiteConfig(event) {
 
 async function persistCatalog(updated) {
   const response = await fetch('/api/catalog', {
-    method: 'PUT',
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
@@ -674,9 +674,14 @@ async function onSaveRaffle(event) {
     return item;
   });
 
-  await persistCatalog(updated);
-  recalcQuotaPrice();
-  showToast('Configuracoes salvas.');
+  try {
+    await persistCatalog(updated);
+    recalcQuotaPrice();
+    showToast('Configuracoes salvas.');
+  } catch (error) {
+    console.error(error);
+    showToast(error?.message || 'Falha ao salvar configuracoes da rifa.');
+  }
 }
 
 async function onCreateRaffle() {
