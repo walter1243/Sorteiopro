@@ -132,6 +132,7 @@ const state = {
 };
 
 let unsubTickets = null;
+let soldTicketsRefreshTimer = null;
 let allTicketsUnsubs = [];
 const ADMIN_INITIAL_VISIBLE_QUOTAS = 180;
 const ADMIN_QUOTA_LOAD_BATCH = 140;
@@ -809,9 +810,37 @@ function subscribeAllTickets() {
   });
 }
 
+// Busca cotas do Neon (fonte autoritativa: pagamentos via webhook)
+async function fetchSoldTicketsFromNeon(raffleId) {
+  try {
+    const response = await fetch(`/api/raffle-tickets?raffleId=${encodeURIComponent(raffleId)}`, {
+      cache: 'no-store'
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.error || 'Falha ao carregar cotas do servidor.');
+    }
+    return data?.tickets && typeof data.tickets === 'object' ? data.tickets : {};
+  } catch (error) {
+    console.error('[fetchSoldTicketsFromNeon] Error:', error);
+    return null;
+  }
+}
+
+// Mescla tickets do Firebase (tempo real) com tickets do Neon (webhook/servidor)
+// Neon vence em caso de conflito pois é a fonte autoritativa
+function mergeTicketSources(firebaseTickets, neonTickets) {
+  return Object.assign({}, firebaseTickets, neonTickets);
+}
+
 function subscribeTickets() {
   if (unsubTickets) {
     unsubTickets();
+    unsubTickets = null;
+  }
+  if (soldTicketsRefreshTimer) {
+    clearInterval(soldTicketsRefreshTimer);
+    soldTicketsRefreshTimer = null;
   }
 
   const raffle = currentRaffle();
@@ -821,16 +850,41 @@ function subscribeTickets() {
 
   renderBuyersLoadingState();
 
+  let firebaseTickets = {};
+
+  // Firebase: atualizações em tempo real (clientes que confirmaram pelo site)
   const ref = collection(db, 'artifacts', appId, 'public', 'data', `tickets_${raffle.id}`);
-  unsubTickets = onSnapshot(ref, (snap) => {
-    const sold = {};
+  unsubTickets = onSnapshot(ref, async (snap) => {
+    const fb = {};
     snap.forEach((d) => {
-      sold[d.id] = d.data();
+      const data = d.data();
+      const status = String(data.status || '').toLowerCase();
+      // Filtra apenas cotas efetivamente compradas
+      if (status === 'approved' || status === 'paid') {
+        fb[d.id] = data;
+      }
     });
-    state.soldTickets = sold;
+    firebaseTickets = fb;
+
+    // Mescla com última versão do Neon para garantir consistência
+    const neonTickets = await fetchSoldTicketsFromNeon(raffle.id);
+    state.soldTickets = neonTickets !== null
+      ? mergeTicketSources(firebaseTickets, neonTickets)
+      : firebaseTickets;
+
     renderBuyers();
     maybeAutoDrawIfComplete();
   });
+
+  // Neon: sincronização periódica (pagamentos aprovados via webhook)
+  soldTicketsRefreshTimer = setInterval(async () => {
+    const neonTickets = await fetchSoldTicketsFromNeon(raffle.id);
+    if (neonTickets !== null) {
+      state.soldTickets = mergeTicketSources(firebaseTickets, neonTickets);
+      renderBuyers();
+      maybeAutoDrawIfComplete();
+    }
+  }, 15000);
 }
 
 async function onAdminLogin(event) {
