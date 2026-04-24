@@ -121,12 +121,21 @@ const state = {
   drawSpinTimer: null,
   drawModalRaffleId: null,  // raffle id being chosen in modal
   quotaRenderToken: 0,
+  quotaOverviewItems: [],
+  quotaOverviewRenderedCount: 0,
+  quotaOverviewBatchSize: 0,
+  quotaOverviewSoldCount: 0,
+  quotaOverviewAvailableCount: 0,
+  quotaOverviewTotalCount: 0,
   currentQuotaTickets: new Map(),
   raffleOptionsMarkup: ''
 };
 
 let unsubTickets = null;
 let allTicketsUnsubs = [];
+const ADMIN_INITIAL_VISIBLE_QUOTAS = 180;
+const ADMIN_QUOTA_LOAD_BATCH = 140;
+const ADMIN_QUOTA_SCROLL_THRESHOLD_PX = 140;
 
 function currentRaffle() {
   return state.raffles.find((r) => r.id === state.selectedRaffleId) || state.raffles[0];
@@ -345,6 +354,9 @@ function renderQuotaOverview(raffle, soldList) {
   if (!raffle) {
     ui.quotaOverviewSummary.textContent = '';
     ui.quotaOverviewGrid.innerHTML = '';
+    state.quotaOverviewItems = [];
+    state.quotaOverviewRenderedCount = 0;
+    state.quotaOverviewTotalCount = 0;
     return;
   }
 
@@ -357,74 +369,122 @@ function renderQuotaOverview(raffle, soldList) {
   const availableCount = Math.max(totalQuotas - soldList.length, 0);
 
   const isMobile = window.matchMedia('(max-width: 760px)').matches || isMobileInteraction();
-  const maxRendered = isMobile ? 1200 : 3000;
-  const renderTotal = Math.min(totalQuotas, maxRendered);
-  const token = ++state.quotaRenderToken;
+  const batchSize = isMobile ? ADMIN_QUOTA_LOAD_BATCH : ADMIN_QUOTA_LOAD_BATCH * 2;
+  const initialVisible = isMobile ? ADMIN_INITIAL_VISIBLE_QUOTAS : ADMIN_INITIAL_VISIBLE_QUOTAS * 2;
 
-  const summaryBase = `${soldList.length} compradas | ${availableCount} disponiveis | ${totalQuotas} no total`;
-  ui.quotaOverviewSummary.textContent = totalQuotas > renderTotal
-    ? `${summaryBase} | exibindo ${renderTotal} primeiras para melhor desempenho`
-    : summaryBase;
+  state.quotaOverviewItems = [];
+  state.quotaOverviewRenderedCount = 0;
+  state.quotaOverviewBatchSize = batchSize;
+  state.quotaOverviewSoldCount = soldList.length;
+  state.quotaOverviewAvailableCount = availableCount;
+  state.quotaOverviewTotalCount = totalQuotas;
+  state.quotaRenderToken += 1;
+
+  for (let cursor = 0; cursor < totalQuotas; cursor += 1) {
+    const number = String(cursor).padStart(3, '0');
+    const soldEntry = soldByNumber.get(number);
+    const status = String(soldEntry?.status || '').toLowerCase();
+
+    state.quotaOverviewItems.push({
+      number,
+      soldEntry,
+      isSold: soldNumbers.has(number),
+      isWinner: raffle.winner?.number === number,
+      isClientSelected: ['awaiting_payment', 'pending', 'approved', 'paid', 'confirmed'].includes(status)
+    });
+  }
 
   ui.quotaOverviewGrid.innerHTML = '';
+  ui.quotaOverviewGrid.scrollTop = 0;
+  renderQuotaOverviewChunk(initialVisible);
+}
 
-  const chunkSize = isMobile ? 180 : 320;
-  let cursor = 0;
+function renderQuotaOverviewSummary() {
+  const soldCount = state.quotaOverviewSoldCount;
+  const availableCount = state.quotaOverviewAvailableCount;
+  const totalCount = state.quotaOverviewTotalCount;
+  const renderedCount = state.quotaOverviewRenderedCount;
 
-  const renderChunk = () => {
+  ui.quotaOverviewSummary.textContent = `${soldCount} compradas | ${availableCount} disponiveis | exibindo ${renderedCount} de ${totalCount}`;
+}
+
+function renderQuotaOverviewChunk(chunkSize) {
+  if (!state.quotaOverviewItems.length) {
+    renderQuotaOverviewSummary();
+    return;
+  }
+
+  const token = state.quotaRenderToken;
+  const start = state.quotaOverviewRenderedCount;
+  const end = Math.min(start + chunkSize, state.quotaOverviewItems.length);
+
+  if (start >= end) {
+    renderQuotaOverviewSummary();
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  for (let index = start; index < end; index += 1) {
+    const item = state.quotaOverviewItems[index];
+    const firstName = item.soldEntry?.buyerName ? item.soldEntry.buyerName.trim().split(/\s+/)[0] : '';
+
+    let chip;
+    if (item.soldEntry) {
+      chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'quota-chip quota-chip-button';
+      chip.dataset.number = item.number;
+      chip.setAttribute('aria-label', `Cota ${item.number} de ${firstName || 'comprador'}`);
+    } else {
+      chip = document.createElement('span');
+      chip.className = 'quota-chip';
+    }
+
+    if (item.isSold) chip.classList.add('sold');
+    if (item.isClientSelected) chip.classList.add('client-selected');
+    if (item.isWinner) chip.classList.add('winner');
+
+    const strong = document.createElement('strong');
+    strong.textContent = item.number;
+    chip.appendChild(strong);
+
+    if (firstName) {
+      const small = document.createElement('small');
+      small.textContent = firstName;
+      chip.appendChild(small);
+    }
+
+    fragment.appendChild(chip);
+  }
+
+  requestAnimationFrame(() => {
     if (token !== state.quotaRenderToken) {
       return;
     }
 
-    const fragment = document.createDocumentFragment();
-    const end = Math.min(cursor + chunkSize, renderTotal);
-
-    for (; cursor < end; cursor += 1) {
-      const number = String(cursor).padStart(3, '0');
-      const soldEntry = soldByNumber.get(number);
-      const isSold = soldNumbers.has(number);
-      const isWinner = raffle.winner?.number === number;
-      const status = String(soldEntry?.status || '').toLowerCase();
-      const isClientSelected = ['awaiting_payment', 'pending', 'approved', 'paid', 'confirmed'].includes(status);
-      const firstName = soldEntry?.buyerName ? soldEntry.buyerName.trim().split(/\s+/)[0] : '';
-
-      let chip;
-      if (soldEntry) {
-        chip = document.createElement('button');
-        chip.type = 'button';
-        chip.className = 'quota-chip quota-chip-button';
-        chip.dataset.number = number;
-        chip.setAttribute('aria-label', `Cota ${number} de ${firstName || 'comprador'}`);
-      } else {
-        chip = document.createElement('span');
-        chip.className = 'quota-chip';
-      }
-
-      if (isSold) chip.classList.add('sold');
-      if (isClientSelected) chip.classList.add('client-selected');
-      if (isWinner) chip.classList.add('winner');
-
-      const strong = document.createElement('strong');
-      strong.textContent = number;
-      chip.appendChild(strong);
-
-      if (firstName) {
-        const small = document.createElement('small');
-        small.textContent = firstName;
-        chip.appendChild(small);
-      }
-
-      fragment.appendChild(chip);
-    }
-
     ui.quotaOverviewGrid.appendChild(fragment);
+    state.quotaOverviewRenderedCount = end;
+    renderQuotaOverviewSummary();
+  });
+}
 
-    if (cursor < renderTotal) {
-      requestAnimationFrame(renderChunk);
-    }
-  };
+function onQuotaOverviewScroll() {
+  if (!state.quotaOverviewItems.length) {
+    return;
+  }
 
-  requestAnimationFrame(renderChunk);
+  const hasMore = state.quotaOverviewRenderedCount < state.quotaOverviewItems.length;
+  if (!hasMore) {
+    return;
+  }
+
+  const container = ui.quotaOverviewGrid;
+  const reachedLoadZone = container.scrollTop + container.clientHeight >= container.scrollHeight - ADMIN_QUOTA_SCROLL_THRESHOLD_PX;
+  if (!reachedLoadZone) {
+    return;
+  }
+
+  renderQuotaOverviewChunk(state.quotaOverviewBatchSize || ADMIN_QUOTA_LOAD_BATCH);
 }
 
 function renderBuyersLoadingState() {
@@ -432,6 +492,10 @@ function renderBuyersLoadingState() {
   ui.buyersBody.innerHTML = '<tr><td colspan="4">Carregando cotas desta rifa...</td></tr>';
   ui.quotaOverviewSummary.textContent = 'Carregando cotas da rifa selecionada...';
   ui.quotaOverviewGrid.innerHTML = '';
+  state.quotaOverviewItems = [];
+  state.quotaOverviewRenderedCount = 0;
+  state.quotaOverviewTotalCount = 0;
+  state.quotaRenderToken += 1;
   state.currentQuotaTickets = new Map();
   ui.winnerBox.textContent = 'Carregando dados da rifa selecionada...';
 }
@@ -1339,6 +1403,8 @@ async function init() {
     }
     openQuotaDetailFromEvent(event);
   });
+
+  ui.quotaOverviewGrid.addEventListener('scroll', onQuotaOverviewScroll, { passive: true });
 
   ui.raffleTotalValue.addEventListener('input', recalcQuotaPrice);
   ui.totalQuotas.addEventListener('input', recalcQuotaPrice);

@@ -270,6 +270,35 @@ button:disabled {
   margin: 14px 0 10px;
 }
 
+.buyers-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+.buyers-kpi-card {
+  border: 1px solid #2a3f60;
+  border-radius: 12px;
+  background: linear-gradient(150deg, #10213b 0%, #0d182a 100%);
+  padding: 10px 12px;
+}
+
+.buyers-kpi-card h5 {
+  margin: 0 0 4px;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #dbe7ff;
+}
+
+.buyers-kpi-card p {
+  margin: 0;
+  color: #aabedf;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
 .quota-overview {
   margin: 14px 0 16px;
   background: #101a2c;
@@ -290,7 +319,9 @@ button:disabled {
   grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
   gap: 8px;
   max-height: 260px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  align-content: start;
 }
 
 .quota-legend {
@@ -748,6 +779,25 @@ td {
   margin-bottom: 12px;
 }
 
+.draw-guide {
+  margin: 0 0 12px;
+  border: 1px solid #294061;
+  border-radius: 12px;
+  background: #0e1b31;
+  padding: 10px 12px;
+}
+
+.draw-guide p {
+  margin: 0;
+  color: #abc0e3;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.draw-guide p + p {
+  margin-top: 6px;
+}
+
 .draw-raffle-card-row {
   display: flex;
   align-items: center;
@@ -1035,15 +1085,8 @@ td {
   }
 
   .quota-overview-grid {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding-bottom: 6px;
-  }
-
-  .quota-overview-grid .quota-chip {
-    min-width: 62px;
+    grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+    padding-right: 4px;
   }
 }
 
@@ -1153,6 +1196,10 @@ td {
 
   .table-wrap td[colspan]::before {
     content: none;
+  }
+
+  .buyers-kpi-row {
+    grid-template-columns: 1fr;
   }
 
   #buyers-body td:nth-child(1)::before {
