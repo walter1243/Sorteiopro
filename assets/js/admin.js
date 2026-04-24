@@ -381,17 +381,17 @@ function renderQuotaOverview(raffle, soldList) {
   state.quotaOverviewTotalCount = totalQuotas;
   state.quotaRenderToken += 1;
 
-  for (let cursor = 0; cursor < totalQuotas; cursor += 1) {
-    const number = String(cursor).padStart(3, '0');
-    const soldEntry = soldByNumber.get(number);
-    const status = String(soldEntry?.status || '').toLowerCase();
+  // Exibe apenas cotas aprovadas/vendidas, ordenadas numericamente
+  const sortedSold = [...soldList].sort((a, b) => Number(a.number) - Number(b.number));
+  for (const soldEntry of sortedSold) {
+    const number = String(soldEntry.number).padStart(3, '0');
 
     state.quotaOverviewItems.push({
       number,
       soldEntry,
-      isSold: soldNumbers.has(number),
+      isSold: true,
       isWinner: raffle.winner?.number === number,
-      isClientSelected: ['awaiting_payment', 'pending', 'approved', 'paid', 'confirmed'].includes(status)
+      isClientSelected: false
     });
   }
 
@@ -406,7 +406,7 @@ function renderQuotaOverviewSummary() {
   const totalCount = state.quotaOverviewTotalCount;
   const renderedCount = state.quotaOverviewRenderedCount;
 
-  ui.quotaOverviewSummary.textContent = `${soldCount} compradas | ${availableCount} disponiveis | exibindo ${renderedCount} de ${totalCount}`;
+  ui.quotaOverviewSummary.textContent = `${soldCount} compradas | ${availableCount} disponiveis | exibindo ${renderedCount} de ${soldCount} aprovadas`;
 }
 
 function renderQuotaOverviewChunk(chunkSize) {
